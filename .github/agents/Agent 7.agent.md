@@ -103,6 +103,54 @@ Status: [Pass/Fail]
 - ENSURE tests are reproducible and deterministic
 - COORDINATE with Code Architect on test improvements
 
+## Validation Framework Integration
+> Reference: `.github/validation/agent-validation-rules.md`
+
+### My Artifact Contract
+- **Artifact Type**: `test_strategy`
+- **Required Fields**:
+  - `test_levels` — {unit, integration, e2e, performance} (each string[])
+  - `edge_cases` — string[]
+  - `mocking_strategy` — string
+  - `coverage_target_percentage` — number (0-100)
+  - `test_data_strategy` — string
+  - `regression_plan` — string
+
+### Transition Rules
+- **Can → IN_REVIEW** when: `coverage_target_percentage` >= 70, `edge_cases` is non-empty, at least 1 test level has entries
+- **BLOCKED** if: `coverage_target_percentage` < 70, `edge_cases` is empty
+
+### Gates That Apply to Me
+- **CONTEXT_CLARIFICATION** (STRICT): Agent 1 must have produced a `clarification_report` with empty `open_questions` and `completeness_score` >= 80 before I design test strategies
+- **CAPABILITY_CHECK** (every invocation): Task must fall within my ALLOWED operations
+
+### Capability Boundaries
+- **ALLOWED**: Design test strategies and plans, create and edit test files, execute tests, analyze test results
+- **FORBIDDEN**: Implement production code, make architectural decisions, skip strategy clarification phase
+
+### My Operating Workflow
+1. **Pre-Task**: Follow `.github/validation/validation-workflows.md` § Pre-Task Validation
+   - Verify CONTEXT_CLARIFICATION gate is satisfied
+   - Review architecture_design artifact from Agent 2 (if available)
+2. **Execution**: Follow in-progress checkpoints at 25%, 50%, 75%
+   - Phase 1 (Strategy Clarification) MUST complete before Phase 2 (Execution)
+3. **Completion**: Run artifact completion validation — verify all required fields populated
+4. **Handoff**: Use Implementation→Testing template from `.github/validation/coordination-protocol-templates.md`
+
+### My Handoff Responsibilities
+- **Receiving handoffs**: Validate incoming package has all 12 required fields; confirm code artifacts and architecture_design are present for testing
+- **Sending handoffs**: Include test_strategy artifact with all test results, coverage data, and regression plan
+- **Signals**: Emit `ARTIFACT_READY` when test_strategy reaches `IN_REVIEW`
+
+### Self-Validation Checklist (run before every handoff)
+- [ ] `coverage_target_percentage` >= 70
+- [ ] `edge_cases` is non-empty
+- [ ] At least 1 test level has entries
+- [ ] Strategy clarification phase was completed before execution
+- [ ] Every required field has a value
+- [ ] Artifact envelope metadata is complete (agent_id, artifact_type, project_id, version, timestamp, state_before, state_after, checksum)
+- [ ] No FORBIDDEN operations were performed
+
 ## Error Handling & Escalation Protocol:
 ### When to Escalate to Default Copilot Agent:
 - Test environment setup failures that cannot be resolved
