@@ -1,0 +1,5 @@
+.DS_Store
+*.zip
+todo-app/
+*.md
+!.github/agents/*.agent.md
