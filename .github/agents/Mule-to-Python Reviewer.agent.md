@@ -322,19 +322,32 @@ Do **not** web-search inline during individual EC checks. Instead, during **Phas
   - `report_file` — string (path to saved report)
 
 ### Transition Rules
-- **Can → IN_REVIEW** when: All categories analyzed, `opsgenie_alerting` fully populated, summary and report file produced
-- **BLOCKED** if: Any category missing, `opsgenie_alerting` is empty or not run, `opsgenie_overall_status` is `INCOMPLETE`, or report file not produced
+- **Can → IN_REVIEW** when: all 9 required fields are populated — `api_parity`, `data_mapping`, `error_handling`, `integration_points`, `opsgenie_alerting` (all 10 items), `edge_cases`, `summary`, `opsgenie_overall_status`, and `report_file`; Phase 8 web-verify batch is complete; no deprecated recommendations remain in the report
+- **BLOCKED** if: any of the 9 required fields is empty or missing, `opsgenie_alerting` has fewer than 10 items, `opsgenie_overall_status` is not set, or `report_file` path is not produced
 
 ### Capability Boundaries
 - **ALLOWED**: Read files, search codebase, produce migration checklist, write the output report file (`.github/reports/migration_checklist_[timestamp].md`), web search for reference
 - **FORBIDDEN**: Edit or fix application code (MuleSoft XML or Python Lambda source), execute terminal commands, implement solutions, modify any file other than the report output
 
+### My Handoff Responsibilities
+- **Receiving handoffs**: This agent is invoked directly by a user with file paths — there is no upstream agent handoff in this pipeline. If invoked via handoff, validate that MuleSoft path, Python Lambda path, and ActiveBatch path are all present in the incoming package.
+- **Sending handoffs**: Use the **`MigrationReview→Implementation`** template from `.github/validation/coordination-protocol-templates.md`; include the `migration_checklist` artifact, the report file path, and `opsgenie_overall_status`
+- **Signals**: Emit `ARTIFACT_READY` when `migration_checklist` reaches `IN_REVIEW`
+
 ### Self-Validation Checklist (run before every handoff)
-Verify **all items in the Success Criteria section below** are met, then confirm these four artifact-envelope items:
+- [ ] `api_parity` is non-empty
+- [ ] `data_mapping` is non-empty
+- [ ] `error_handling` is non-empty
+- [ ] `integration_points` is non-empty
+- [ ] `opsgenie_alerting` has exactly 10 items (one per mandatory check)
+- [ ] `edge_cases` is populated
+- [ ] `summary` is populated with per-category scores
+- [ ] `opsgenie_overall_status` is set to COMPLETE or INCOMPLETE
+- [ ] `report_file` path is populated and file has been written
 - [ ] **Mule version confirmed as Mule 4** — if Mule 3 detected, analysis stopped and user warned before any further phases ran
 - [ ] **Phase 8 web-verify batch completed** — all library/service/API names deduplicated and checked; no deprecated recommendation in the final report
-- [ ] **`opsgenie_overall_status`** set to COMPLETE or INCOMPLETE in the artifact contract
 - [ ] **No FORBIDDEN operations performed** — no source code edited, no terminal commands run, no files modified other than the report output
+- [ ] Artifact envelope metadata is complete (agent_id, artifact_type, project_id, version, timestamp, state_before, state_after, checksum)
 
 ---
 
