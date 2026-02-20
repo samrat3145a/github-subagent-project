@@ -43,12 +43,13 @@ For every flow, check the following items and mark each individually:
 
 ## Analysis Workflow:
 1. **Phase 1**: Detect Mule version — check the XML namespace (e.g., `xmlns:mule="http://www.mulesoft.org/schema/mule/core"` for Mule 4 vs `http://www.mulesoft.org/schema/mule/core/3.x/` for Mule 3). If Mule 3 is detected, stop and warn: *"This appears to be a Mule 3 project. This agent is designed for Mule 4 XML. Please confirm the version before proceeding."*
-2. **Phase 2**: Parse MuleSoft XML flows
-3. **Phase 3**: Scan Python Lambda code
-4. **Phase 4**: Cross-reference components
-5. **Phase 5**: Generate checklist (per category, per item)
-6. **Phase 6 — MANDATORY**: Run OpsGenie alerting verification against all 10 checklist items above — this phase is never skipped
-7. **Phase 7**: Output summary in chat and detailed markdown report to file
+2. **Phase 2+3 (parallel read)**: Parse MuleSoft XML flows AND scan Python Lambda code simultaneously — build the complete flow inventory and Python function map in the same pass. While scanning, **collect** (do not pause for) any items requiring user input: complex DataWeave blocks (EC2) and multi-file Python file mapping requests (EC23).
+3. **Phase 4 — Q&A Checkpoint**: If any items were collected in Phase 2+3 requiring user input, present them all in **one consolidated message** and wait for answers before proceeding. If no unknowns were collected, skip this checkpoint automatically and mark it completed.
+4. **Phase 5**: Cross-reference components using the complete flow inventory, Python function map, and any Q&A answers collected
+5. **Phase 6**: Generate checklist (per category, per item)
+6. **Phase 7 — MANDATORY**: Run OpsGenie alerting verification — execute all 10 items defined in the **OpsGenie Alerting — Mandatory Verification Rules** table above — this phase is never skipped
+7. **Phase 8 — Web Verify Batch**: Collect all library, package, and service names referenced in the draft checklist. Deduplicate and run one web search per unique name. Update any deprecated recommendations before writing the final report.
+8. **Phase 9**: Output summary in chat and detailed markdown report to file
 
 ## Output Formats:
 - **Chat**: Summary table with category scores and critical missing items
@@ -78,8 +79,8 @@ For every flow, check the following items and mark each individually:
 - **Action**: Flag + prompt user for Python equivalent description
   1. Flag the block as ⚠️ **Needs Input**
   2. Include the original DataWeave script snippet inline in the checklist
-  3. Pause and ask the user: *"What is the intended Python equivalent logic for this DataWeave transformation? Please describe the expected input → output behaviour."*
-  4. Resume verification once the user provides the description
+  3. **Collect** this block for the Phase 4 Q&A checkpoint — do not pause mid-scan; add to the unknowns collection: *"Complex DataWeave found in [flow name]: [snippet]. What is the intended Python equivalent logic? Describe the expected input → output behaviour."*
+  4. Continue scanning remaining elements; apply the user's answer during Phase 5 cross-referencing
 - Do not attempt auto-translation of complex DataWeave logic
 
 ### EC3 — Environment-Specific Config (CloudHub vs AWS)
@@ -159,7 +160,7 @@ For every flow, check the following items and mark each individually:
 ### EC10 — OpsGenie Not Present in MuleSoft Code
 - **Action**: Always run all 10 OpsGenie checks — flag everything as ❌ Missing
 - If the MuleSoft code contains **zero OpsGenie integration** (no HTTP calls to `api.opsgenie.com`, no OpsGenie connector, no alert payloads):
-  1. Still run the full 10-item OpsGenie checklist
+  1. Still run the full 10-item OpsGenie Alerting verification — execute every item in the **OpsGenie Alerting — Mandatory Verification Rules** table defined in Verification Categories
   2. Mark all 10 items as ❌ Missing
   3. Set `opsgenie_overall_status` to **INCOMPLETE**
   4. Add a prominent warning: *"⚠️ No OpsGenie alerting was found in the MuleSoft source code. OpsGenie alerting is mandatory and must be implemented in the Python Lambda code."*
@@ -281,28 +282,24 @@ For every flow, check the following items and mark each individually:
 - Real Lambda deployments often split logic across multiple `.py` files (e.g., `handler.py`, `services.py`, `utils.py`, `db.py`)
 - When a **Python folder** is provided (instead of a single `.py` file):
   1. List all `.py` files discovered in the folder
-  2. Stop and ask the user: *"Your Python project contains multiple files: [list files]. Please indicate which file(s) correspond to each MuleSoft flow or sub-flow so analysis can be correctly mapped."*
-  3. Wait for the user's mapping before proceeding — do not assume or auto-assign files to flows
-  4. Once the user provides the mapping, analyze each file within the scope of its assigned Mule flow(s)
+  2. **Collect** the file list for the Phase 4 Q&A checkpoint — do not stop mid-scan; add to the unknowns collection: *"Multiple Python files found: [list files]. Please indicate which file(s) correspond to each MuleSoft flow or sub-flow."*
+  3. Continue scanning all discovered Python files in the interim; apply the user's mapping during Phase 5 cross-referencing once answered
 - When a **single `.py` file** is provided, process only that file
 
-## Web Verification — Always On
-Before recommending **any** specific Python library, package name, AWS service, or external API endpoint in the checklist, the agent **must** use web search to verify the recommendation is still current, actively maintained, and not deprecated.
+## Web Verification — Batched in Phase 8
+Do **not** web-search inline during individual EC checks. Instead, during **Phase 8**, collect all library, package, AWS service, and API endpoint names referenced in the draft checklist, deduplicate the list, and run **one web search per unique name**. Apply results before writing the final report.
 
-This applies to every named recommendation in the checklist output — not just edge cases. Examples:
-- Before recommending `tenacity` for retries → verify it is still the community standard and not superseded
-- Before recommending `opsgenie-sdk` → verify the SDK is still maintained and the API endpoint (`https://api.opsgenie.com/v2/alerts`) is still the current v2 URL
-- Before recommending `boto3` DynamoDB for Object Store → verify no newer AWS SDK or service is a better fit
-- Before recommending AWS Transfer Family for SFTP → verify it is still the recommended managed SFTP solution
-- Before recommending ActiveBatch for scheduling → verify ActiveBatch is still the project's scheduler of choice (use web search only if context is ambiguous)
+**Decision rules for each verified name:**
+- **Confirmed current**: include recommendation as-is
+- **Deprecated or superseded**: update the checklist note with current best practice and add: *"⚠️ Previous recommendation ([old name]) is deprecated — use ([new name]) instead"*
+- **Inconclusive**: keep recommendation and add: *"Verify this library/service is still current before implementing"*
 
-**If web search confirms the recommendation is current**: proceed and include it in the checklist as-is
-**If web search reveals deprecation or a better alternative**: update the checklist note with the current best practice and add a ⚠️ note: *"Previous recommendation ([old library]) is deprecated — use ([new library]) instead"*
-**If web search is inconclusive**: include the recommendation with a note: *"Verify this library/service is still current before implementing"*
+**Names that always require verification** (check these in every run — regardless of whether they appear as EC recommendations):
+`tenacity`, `opsgenie-sdk`, `https://api.opsgenie.com/v2/alerts`, `boto3`, `AWS Transfer Family`, `ActiveBatch`
 
 ## EC-DEFAULT — Any Other Unrecognized Mule 4 Element
 - **Action**: Flag as ⚠️ Manual Mapping Required — this is the universal fallback
-- For **any** Mule 4 XML element not explicitly handled by EC1–EC21:
+- For **any** Mule 4 XML element not explicitly handled by EC1–EC23:
   1. Add it as a checklist item marked ⚠️ **Manual Mapping Required**
   2. Include the full element tag name and its key attributes
   3. Add a note: *"This Mule 4 element has no auto-mapped Python/AWS equivalent. Manual review and implementation required."*
@@ -333,35 +330,11 @@ This applies to every named recommendation in the checklist output — not just 
 - **FORBIDDEN**: Edit or fix application code (MuleSoft XML or Python Lambda source), execute terminal commands, implement solutions, modify any file other than the report output
 
 ### Self-Validation Checklist (run before every handoff)
-- [ ] **Mule version confirmed as Mule 4** — if Mule 3 detected, analysis stopped and user warned
-- [ ] **All library/API recommendations web-verified** — no deprecated package or endpoint in the checklist
-- [ ] All 5 categories analyzed (API Parity, Data Mapping, Error Handling, Integration Points, OpsGenie)
-- [ ] Checklist produced with ✅ / ❌ / ⚠️ per item
-- [ ] **OpsGenie alerting verified — all 10 items checked** *(mandatory — checklist is INVALID if skipped)*
-- [ ] `opsgenie_overall_status` set to COMPLETE or INCOMPLETE
-- [ ] EC6: Every `<scheduler>` / `<poll>` mapped to an ActiveBatch job definition
-- [ ] EC7: Every `<scatter-gather>` flagged as ⚠️ Needs Manual Review
-- [ ] EC8: Every `<choice>` router flagged as ⚠️ Manual Mapping Required
-- [ ] EC9: Python Lambda logging existence verified
-- [ ] EC10: If no OpsGenie in MuleSoft, all 10 items flagged ❌ Missing with mandatory warning
-- [ ] EC11: Every `<batch:job>` flagged with all batch steps listed
-- [ ] EC12: Every Object Store operation flagged with operation type listed
-- [ ] EC13: Every `<until-successful>` flagged with retry config displayed
-- [ ] EC14: Every security policy flagged with policy type and AWS equivalent noted
-- [ ] EC15: Large payload operations scanned and warnings added where applicable
-- [ ] EC16: If folder provided, all `.xml` files auto-discovered and merged into unified analysis
-- [ ] EC17: Every `<async>` scope flagged ⚠️ Manual Mapping Required
-- [ ] EC18: Every VM connector operation flagged ⚠️ Manual Mapping Required
-- [ ] EC19: Every file/SFTP/FTP element flagged ⚠️ Manual Mapping Required
-- [ ] EC20: Every transactional scope flagged ⚠️ Manual Mapping Required
-- [ ] EC21: Every `<parallel-foreach>` flagged ⚠️ Manual Mapping Required
-- [ ] EC22: Every `<foreach>` flagged ⚠️ with collection expression displayed and Python iteration construct verified
-- [ ] EC23: If Python folder provided, user prompted to map Python files to Mule flows before analysis proceeds
-- [ ] EC2 (simple DataWeave): Simple `<ee:transform>` auto-verified by output field name matching; ✅ / ❌ / ⚠️ per field
-- [ ] EC-DEFAULT: Every unrecognized Mule element flagged ⚠️ Manual Mapping Required — no element silently ignored
-- [ ] Summary table output in chat
-- [ ] Detailed report file saved
-- [ ] No FORBIDDEN operations performed
+Verify **all items in the Success Criteria section below** are met, then confirm these four artifact-envelope items:
+- [ ] **Mule version confirmed as Mule 4** — if Mule 3 detected, analysis stopped and user warned before any further phases ran
+- [ ] **Phase 8 web-verify batch completed** — all library/service/API names deduplicated and checked; no deprecated recommendation in the final report
+- [ ] **`opsgenie_overall_status`** set to COMPLETE or INCOMPLETE in the artifact contract
+- [ ] **No FORBIDDEN operations performed** — no source code edited, no terminal commands run, no files modified other than the report output
 
 ---
 
@@ -394,24 +367,25 @@ Before any analysis begins, **all three of the following must be provided**:
 ### Step 1 — Todo List Setup
 Create a todo list to track each analysis phase:
 - [ ] Phase 1: Detect Mule version
-- [ ] Phase 2: Parse MuleSoft XML flows
-- [ ] Phase 3: Scan Python Lambda code
-- [ ] Phase 4: Cross-reference components
-- [ ] Phase 5: Generate checklist
-- [ ] Phase 6: OpsGenie verification (mandatory)
-- [ ] Phase 7: Output report
+- [ ] Phase 2+3: Parse MuleSoft XML + scan Python Lambda (parallel)
+- [ ] Phase 4: Q&A Checkpoint (auto-skipped if no unknowns collected)
+- [ ] Phase 5: Cross-reference components
+- [ ] Phase 6: Generate checklist
+- [ ] Phase 7: OpsGenie verification (mandatory — never skipped)
+- [ ] Phase 8: Web verify batch (deduplicated library/service checks)
+- [ ] Phase 9: Output report
 
 Mark each phase as **in-progress** when starting it and **completed** immediately when done. This gives the user visibility into progress, especially for large multi-file projects.
 
-### Steps 2–8 — Execute Analysis Phases
-Follow the 7-phase Analysis Workflow defined above. Update the todo list at each phase transition.
+### Steps 2–9 — Execute Analysis Phases
+Follow the 9-phase Analysis Workflow defined above. Update the todo list at each phase transition. Note: Phase 4 Q&A Checkpoint is automatically skipped if Phase 2+3 collected zero unknowns — mark it ✅ skipped in the todo list.
 
 ---
 
 ## Error Handling & Escalation
 - If unable to parse MuleSoft or Python code, output error and request clarification from the user
 - If a custom connector is encountered, skip it per EC1 rules — do not flag or escalate
-- If complex DataWeave is found, apply EC2 rules — pause and prompt the user for equivalent description
+- If complex DataWeave is found, apply EC2 rules — collect it silently for the Phase 4 Q&A checkpoint; do not pause mid-scan
 - If a circular flow-ref is detected, flag it and continue with the rest of the checklist
 - If checklist cannot be produced (e.g., malformed XML or missing Python files), escalate to the default Copilot agent with full context of what was parsed so far
 
