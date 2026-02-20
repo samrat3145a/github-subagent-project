@@ -2,6 +2,8 @@
 
 > Use this checklist BEFORE declaring any task complete.
 > A task with unchecked mandatory items is NOT complete.
+>
+> **When a check fails**: Do not skip it and declare completion anyway. See the Remediation Guide at the bottom of this document.
 
 ---
 
@@ -91,6 +93,11 @@ governance_report:
 - [ ] My output is compatible with existing architecture decisions
 - [ ] Dependencies I reference actually exist and are accessible
 
+> **If an upstream artifact doesn't exist yet** (e.g., you are the first agent and there is no `clarification_report`):
+> - Skip the check for that specific artifact — mark it N/A with a note
+> - Do NOT block completion solely because an optional upstream artifact is absent
+> - If the absent artifact is a **required gate** for your work (e.g., CONTEXT_CLARIFICATION must pass before Code Architect starts), stop and invoke or request that artifact before proceeding
+
 ---
 
 ## Handoff Readiness
@@ -107,3 +114,46 @@ governance_report:
 - [ ] I would be confident if a Coordinator reviewed this right now
 - [ ] This output represents my best work within my capabilities
 - [ ] All validation workflow checkpoints (25%, 50%, 75%) were executed
+
+---
+
+## Remediation Guide
+
+When a check fails, use the following actions before re-attempting completion:
+
+### "Requirement not addressed"
+```
+→ Re-read the original task and handoff package
+→ Identify which requirement was missed
+→ Add the missing output before re-running this checklist
+→ Do NOT declare completion with a known gap
+```
+
+### "Required artifact field is empty or stub"
+```
+→ Populate the field with real content — remove all placeholder values
+→ Re-run the type-specific transition rules for this artifact
+→ If you cannot determine the correct value: flag it as an open question and escalate to the user or Coordinator
+```
+
+### "Output contradicts clarification_report or execution_plan"
+```
+→ Identify the specific contradiction
+→ Determine which is correct: your output or the upstream artifact
+→ If your output is wrong: revise it
+→ If the upstream artifact is wrong: return it to its producing agent for correction before completing your task
+```
+
+### "Quality check fails (internal contradiction, fabricated content, broken cross-reference)"
+```
+→ Correct the specific issue before declaring completion
+→ For fabricated content: remove it entirely; replace with verified information or explicitly flag as assumption
+→ For broken cross-reference: locate the correct artifact or note the reference as unresolvable
+```
+
+### "Handoff readiness check fails"
+```
+→ Identify what the next agent needs that you haven't produced
+→ Produce the missing deliverable or document it as a known gap with justification
+→ Do NOT hand off with a gap you know will block the next agent
+```

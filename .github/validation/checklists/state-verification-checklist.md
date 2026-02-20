@@ -1,8 +1,12 @@
 # State Verification Checklist
 
 > Use this to verify project state is consistent and correct.
-> Run by Coordinator (Agent 8) at every phase transition and before governance review.
+> Run by **Coordinator (Agent 8 / Team Coordinator)** at every phase transition and before governance review.
 > Any agent can run sections 1-3 for self-verification.
+>
+> **Pass/Fail threshold**: All checkboxes in sections 1–4 must be checked for state to be considered CONSISTENT. Section 5 must have all boxes checked for a phase transition to proceed. Any unchecked item = INCONSISTENT — do not advance the phase until resolved.
+>
+> **When a check fails**: See the Remediation Guide at the bottom of this document.
 
 ---
 
@@ -148,6 +152,50 @@ APPROVED:
 - [ ] Only agents appropriate for the current phase are active
 - [ ] No two agents claim to be working on the same artifact simultaneously
 - [ ] All active agents have valid, complete handoff packages
+
+---
+
+## Remediation Guide
+
+When any check fails, use the following actions before re-running verification:
+
+### Section 1 (Phase Consistency) fails
+```
+→ Identify which checkpoint is missing evidence
+→ Invoke the agent responsible for producing that checkpoint's artifact
+→ Do NOT advance the phase until the checkpoint evidence artifact reaches VALIDATED state
+→ If phase was skipped without user override: roll back to the last consistent phase
+```
+
+### Section 2 (Artifact Integrity) fails
+```
+→ For missing/empty fields: return artifact to producing agent with specific list of gaps
+→ For illegal state transition: roll back artifact to last legal state; re-run transition rules
+→ For duplicate artifact_id: retain the higher-version artifact; deprecate the lower one
+→ For checksum mismatch: classify as CRITICAL — escalate to Default Copilot immediately
+```
+
+### Section 3 (Dependency Integrity) fails
+```
+→ For circular dependency: escalate to Coordinator to restructure the dependency chain
+→ For missing dependency artifact: invoke the agent that produces it before resuming
+→ For REJECTED dependency: return all dependent artifacts to DRAFT; re-run from that point
+→ For orphaned artifact: flag to Coordinator — either connect it to the workflow or archive it
+```
+
+### Section 4 (Checkpoint Verification) fails
+```
+→ For missing evidence artifact: invoke the responsible agent to produce it
+→ For evidence below threshold (e.g., completeness_score < 80): return to producing agent for revision
+→ For evidence in wrong state: advance the artifact through the remaining state transitions first
+```
+
+### Section 5 (Active Agent Consistency) fails
+```
+→ For two agents on same artifact: pause both; Coordinator assigns ownership to one; other is reassigned
+→ For agent in wrong phase: reassign to an appropriate task for the current phase
+→ For agent with invalid handoff: return handoff and block work until corrected
+```
 - [ ] No agent is active without a corresponding task assignment
 
 ---

@@ -71,7 +71,7 @@ ERROR REPORT:
   - Include error report in handoff
   
 - [ ] **HIGH → Level 3 (Coordinator)**
-  - Escalate to Agent 8 (Team Coordinator) or Agent 4 (Orchestrator)
+  - Escalate to **Agent 8 (Team Coordinator)** — responsible for cross-agent orchestration and phase transitions — or **Agent 4 (Orchestrator)** — responsible for task routing and agent sequencing
   - Include: error report + full state snapshot + all artifacts
   - PAUSE all work until resolution received
   
@@ -133,4 +133,28 @@ After error is resolved (at any level):
 → Document both positions
 → Escalate to Coordinator for conflict resolution
 → Follow Conflict Resolution Protocol
+```
+
+### "Rollback failed"
+```
+→ Do NOT proceed with work — state is potentially corrupted
+→ Classify as CRITICAL immediately
+→ Escalate to Default Copilot with: last known good state, failed rollback attempt, all affected artifacts
+→ Halt all agent operations until state is manually restored
+```
+
+### "Escalation target offline / unresponsive"
+```
+→ If peer agent unresponsive: escalate one level up (to Coordinator)
+→ If Coordinator unresponsive: escalate to Default Copilot
+→ Include: original error report + escalation attempts log with timestamps
+→ Do NOT resolve the original error independently if it was HIGH or CRITICAL
+```
+
+### "Two simultaneous errors"
+```
+→ Classify each error independently using Step 1
+→ Handle the higher-severity error first
+→ If both are equal severity: resolve the one blocking more downstream agents first
+→ Document both errors in separate ERROR REPORT entries — do not merge them
 ```

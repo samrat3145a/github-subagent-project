@@ -5,6 +5,37 @@
 
 ---
 
+## Valid Handoff Package — Example
+
+> **✅ Valid (all fields populated, target verified)**
+> ```
+> handoff_id:              handoff_ContextClarifier_CodeArchitect_2026-02-21T10:00:00Z
+> from_agent:              ContextClarifier
+> to_agent:                CodeArchitect
+> timestamp:               2026-02-21T10:00:00Z
+> task_summary:            Clarify and plan OAuth2 login feature for mobile app
+> completed_work:          ["Asked 8 MCQ questions across all 7 categories", "Produced clarification_report v1.0.0"]
+> remaining_work:          ["Implement login flow per solution_plan steps 1-4", "Write unit tests per success_criteria"]
+> deliverables:            ["clarification_report v1.0.0 (.github/artifacts/clarification_report.json)"]
+> context_state:           Phase: IMPLEMENTATION, checkpoint: CONTEXT_CLEAR passed
+> next_agent_requirements: ["Read clarification_report", "Implement steps 1-4", "Populate architecture_design artifact"]
+> success_criteria:        ["All plan steps implemented", "architecture_design reaches IN_REVIEW"]
+> dependencies:            [".github/artifacts/clarification_report.json", "src/ codebase"]
+> escalation_notes:        "OAuth library version conflict possible — see constraint in clarification_report"
+> ```
+>
+> **❌ Invalid (missing fields, vague content)**
+> ```
+> handoff_id:   (missing)
+> from_agent:   Agent1
+> to_agent:     Agent2
+> completed_work: "Done some stuff"
+> remaining_work: "Finish it"
+> ```
+> → Return to sender. Do NOT begin work.
+
+---
+
 ## Source Agent (Sending Work)
 
 ### Before Initiating Handoff:
@@ -67,3 +98,9 @@
 - [ ] Identify specific missing or invalid fields
 - [ ] Return handoff to source agent with specific list of issues
 - [ ] Do NOT begin work on an invalid handoff
+
+### If Target Agent is Unavailable or Unreachable:
+- [ ] Do NOT hold the work indefinitely — escalate to Coordinator (Agent 8 / Team Coordinator)
+- [ ] Include: the fully assembled handoff package + reason target is unreachable
+- [ ] Coordinator will either re-route to an equivalent agent or queue the handoff
+- [ ] If Coordinator is also unavailable: escalate to Default Copilot agent with full context
