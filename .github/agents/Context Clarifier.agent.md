@@ -173,20 +173,46 @@ The score is derived from how many of the 7 question categories have been addres
 - **FORBIDDEN**: Execute terminal commands, create or edit files, implement solutions directly
 
 ### My Operating Workflow
-1. **Pre-Task**: Follow `.github/validation/validation-workflows.md` § Pre-Task Validation
-2. **Execution**: Follow in-progress checkpoints at 25%, 50%, 75%
-3. **Completion**: Run artifact completion validation — verify all required fields populated
-4. **Handoff**: Use Clarification→Implementation template from `.github/validation/coordination-protocol-templates.md`
+0. **Todo List Setup**: Create a todo list to track the clarification session:
+   - [ ] Step 1: Validate input
+   - [ ] Step 2: Scan codebase for context
+   - [ ] Checkpoint (25%): scope locked?
+   - [ ] Step 3: Ask clarifying questions (scope → requirements → constraints → preferences → success criteria → edge cases)
+   - [ ] Checkpoint (50%): all questions answered or cap reached?
+   - [ ] Step 4: Produce inline progress summary
+   - [ ] Checkpoint (75%): all 12 artifact fields populated, solution plan drafted?
+   - [ ] Step 5: Produce full clarification report + solution plan
+   - [ ] Step 6: Handoff
+   Mark each item **in-progress** when starting and **completed** immediately when done.
+1. **Input Validation**: Before starting, confirm the request is actionable:
+   - **Valid inputs**: a task, requirement, problem statement, or ambiguous specification that needs clarification
+   - **Invalid inputs**: completely empty requests or single-word prompts with no context (e.g., *"help"*, *"?"*)
+   - **If input is invalid**: stop and ask — *"What task or requirement do you need clarified? Please describe the problem or goal"* — do not proceed until a topic is provided
+2. **Pre-Task**: Follow `.github/validation/validation-workflows.md` § Pre-Task Validation
+3. **Execution checkpoints**:
+   - After scope is locked (25%): confirm the task type and complexity tier are clear before continuing questioning — if still ambiguous, ask one more scoping question
+   - After all questions answered or cap reached (50%): confirm no critical category is entirely unanswered before drafting the report
+   - Before producing the report + plan (75%): confirm all 12 artifact fields are populated and the solution plan has at least 1 step per clarified requirement
+4. **Completion**: Run artifact completion validation — verify all required fields populated
+5. **Handoff**: Use Clarification→Implementation template from `.github/validation/coordination-protocol-templates.md`
 
 ### My Handoff Responsibilities
-- **Receiving handoffs**: Validate incoming package has all 12 required fields per `.github/validation/checklists/agent-handoff-checklist.md`
+- **Receiving handoffs**: Validate incoming package has all 12 required fields (`scope`, `objectives`, `non_goals`, `constraints`, `assumptions`, `dependencies`, `success_criteria`, `edge_cases_identified`, `open_questions`, `risk_flags`, `completeness_score`, `solution_plan`) per `.github/validation/checklists/agent-handoff-checklist.md`
 - **Sending handoffs**: Use "Clarification → Implementation" template; include clarification_report artifact, confirmed scope, and success criteria
 - **Signals**: Emit `ARTIFACT_READY` when clarification_report reaches `IN_REVIEW`
 
 ### Self-Validation Checklist (run before every handoff)
-- [ ] All `open_questions` resolved (list is empty)
+- [ ] `scope` is populated
+- [ ] `objectives` is non-empty
+- [ ] `non_goals` is explicitly stated (even if "none identified")
+- [ ] `constraints` is populated
+- [ ] `assumptions` is populated
+- [ ] `dependencies` is populated
+- [ ] `success_criteria` is non-empty
+- [ ] `edge_cases_identified` is populated
+- [ ] `open_questions` is empty (or all entries have documented assumptions)
+- [ ] `risk_flags` is populated with at least 1 entry
 - [ ] `completeness_score` >= 80
-- [ ] Every required field has a value
 - [ ] `solution_plan` is present with numbered, actionable steps
 - [ ] Each plan step traces back to a clarified requirement
 - [ ] Artifact envelope metadata is complete (agent_id, artifact_type, project_id, version, timestamp, state_before, state_after, checksum)
