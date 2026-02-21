@@ -448,9 +448,20 @@ These gates BLOCK agent invocation until prerequisites are met. No exceptions.
 ### GATE: CONTEXT_CLARIFICATION
 ```
 DESCRIPTION: All ambiguous requirements must be clarified before implementation
-TRIGGER:     Before invoking Agent 2, Agent 4, Agent 5, Agent 7
+TRIGGER:
+  STRICT  — Before invoking Agent 2 (Code Architect), Agent 4 (Orchestrator),
+             Agent 5 (Efficiency Analyzer, pipeline mode), Agent 7 (Test Strategist),
+             Agent 8 (Team Coordinator, before governance review)
+  ADVISORY — Before invoking Agent 3 (Documentation Researcher),
+              Agent 6 (Instruction Upgrader), Mule-to-Python Reviewer,
+              Workspace Quizmaster, DSA Interview Coach
+              (redirect to Context Clarifier only if request is vague/ambiguous;
+               if clarification_report already exists in the handoff, use it directly)
+
 REQUIRED:    CONTEXT_CLEAR checkpoint must be satisfied
-ENFORCEMENT: STRICT — invocation is BLOCKED if gate fails
+ENFORCEMENT:
+  STRICT agents   — invocation is BLOCKED if gate fails
+  ADVISORY agents — agent self-assesses the request; redirects to Agent 1 if vague
 
 CHECK:
   □ Agent 1 has produced a clarification_report
@@ -461,6 +472,7 @@ CHECK:
 BYPASS CONDITIONS (exceptional only):
   - User explicitly states "requirements are clear, skip clarification"
   - Task is a trivial/obvious operation (single file edit, typo fix)
+  - ADVISORY agents with a clearly scoped standalone request (no clarification_report needed)
 ```
 
 ### GATE: RESEARCH_COMPLETE
