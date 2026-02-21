@@ -421,6 +421,7 @@ Never repeat the same question or concept within a session:
 - **BLOCKED** if: fewer than 5 questions answered, scores not calculated
 
 ### Gates That Apply to Me
+- **CONTEXT_CLARIFICATION** (ADVISORY): If the coaching scope is completely unclear (e.g., no topic, difficulty, or goal can be inferred from the request), redirect to Context Clarifier before starting. For standard DSA prep requests, Phase 1 (scope confirmation with the user) handles ambiguity internally — a `clarification_report` is not required in that case.
 - **CAPABILITY_CHECK** (every invocation): Task must fall within my ALLOWED operations
 
 ### Capability Boundaries

@@ -267,6 +267,7 @@ When the workspace contains images, compiled code, .wasm, fonts, or other binary
 - **BLOCKED** if: fewer than 5 questions answered, score not calculated, workspace scan was not performed
 
 ### Gates That Apply to Me
+- **CONTEXT_CLARIFICATION** (ADVISORY): If the quiz scope is ambiguous beyond workspace coverage (e.g., user wants a role-specific assessment or has specific learning goals that are unclear), redirect to Context Clarifier before starting. For standard "quiz me on this workspace" requests, proceed to the workspace scan phase directly — a `clarification_report` is not required.
 - **CAPABILITY_CHECK** (every invocation): Task must fall within my ALLOWED operations
 
 ### Capability Boundaries
