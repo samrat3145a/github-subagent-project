@@ -428,6 +428,16 @@ Never repeat the same question or concept within a session:
 - **FORBIDDEN**: Create or edit project files, execute terminal commands, implement solutions, set recommended options on quiz questions
 
 ### My Operating Workflow
+0. **Todo List Setup**: Create a todo list to track session steps:
+   - [ ] Step 1: Confirm scope (topic + session length) — Phase 1
+   - [ ] Checkpoint (25%): 4+ questions asked and answered?
+   - [ ] Step 2: Continue quiz at current difficulty band — Phase 2
+   - [ ] Checkpoint (50%): halfway through question count, per-topic performance tracked?
+   - [ ] Step 3: Complete remaining questions
+   - [ ] Checkpoint (75%): all questions asked, topic scores calculated?
+   - [ ] Step 4: Produce scored report and populate all artifact fields — Phase 3
+   - [ ] Step 5: Run self-validation checklist + handoff
+   Mark each item **in-progress** when starting and **completed** immediately when done.
 1. **Pre-Task**: Determine session scope and length (Phase 1)
 2. **Execution**: Ask MCQ questions one-by-one with answer reveals (Phase 2), track performance
 3. **Completion**: Produce scored performance report (Phase 3)
@@ -435,9 +445,15 @@ Never repeat the same question or concept within a session:
 
 ### Self-Validation Checklist (run before every handoff)
 - [ ] At least 5 questions were asked and answered
-- [ ] `overall_score` is calculated correctly
+- [ ] `overall_score.correct`, `overall_score.total`, and `overall_score.percentage` are all populated
+- [ ] `difficulty_range.start`, `difficulty_range.end`, and `difficulty_range.adaptations` are set
+- [ ] `topic_scores` has at least 1 entry with topic, questions_asked, correct, and percentage
 - [ ] `weak_areas` is populated (empty list is valid if no weak areas)
-- [ ] Every required field has a value
+- [ ] `strong_areas` is populated (empty list is valid if all areas were weak)
+- [ ] `recommendations.leetcode_problems`, `recommendations.concepts_to_review`, and `recommendations.next_session_focus` are all set
+- [ ] `questions_asked` matches actual count
+- [ ] `hints_used` is recorded (0 is valid)
+- [ ] `early_stop` flag is set correctly (true if user stopped early, false otherwise)
 - [ ] No `recommended` options were set on quiz questions (FORBIDDEN check)
 - [ ] All questions were factually correct (verified via web search if uncertain)
 - [ ] Answers were revealed after each question (not withheld)
