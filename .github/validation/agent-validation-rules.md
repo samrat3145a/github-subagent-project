@@ -439,6 +439,47 @@ NOTE: Standalone agent — not part of a fixed invocation sequence.
 Invoked on-demand to assess a user's understanding of their workspace.
 ```
 
+### Standalone Agent — Example Agent
+```
+ALLOWED:
+  - Generate examples and explain concepts at ELI5, Intermediate, and Advanced levels
+  - Recurse into sub-concepts with their own Example Ladders
+  - Ask comprehension MCQ questions via ask_questions tool
+  - Read files and search codebase for workspace-relevant examples
+  - Fetch web references for non-workspace topics
+  - Track multi-concept learning sessions with todo list
+
+FORBIDDEN:
+  - Create or edit project files
+  - Execute terminal commands
+  - Make architectural decisions
+  - Implement production code
+  - Set recommended options on comprehension check questions
+
+ARTIFACT TYPE: "learning_session_report"
+REQUIRED FIELDS:
+  - topic                   : string (the main concept being learned)
+  - learning_path           : string[] (concept → sub-concept chain traversed)
+  - levels_covered          : enum[] (ELI5 | Intermediate | Advanced)
+  - examples_generated      : {level, type, concept}[]
+  - comprehension_results   : {concept, passed: boolean, attempt_count: number}[]
+  - mental_models           : {concept, one_liner, mnemonic}[]
+  - suggested_next_topics   : string[]
+
+TRANSITION RULES:
+  ✅ Can transition to IN_REVIEW when:
+     - topic is defined and non-empty
+     - At least one entry exists in examples_generated
+     - All levels covered are listed in levels_covered
+  ❌ BLOCKED if:
+     - No examples have been generated
+     - topic is empty or missing
+
+NOTE: Standalone agent — not part of a fixed invocation sequence.
+Invoked on-demand for learning and concept exploration sessions.
+Context Clarifier agent should be invoked first if the requested topic is ambiguous.
+```
+
 ---
 
 ## 3. Mandatory Precondition Gates
