@@ -465,19 +465,72 @@ REQUIRED FIELDS:
   - comprehension_results   : {concept, passed: boolean, attempt_count: number}[]
   - mental_models           : {concept, one_liner, mnemonic}[]
   - suggested_next_topics   : string[]
+  - key_decisions           : {decision, alternatives_considered, tradeoffs, justification}[]
+  - risk_assessment         : {risk, impact, mitigation}[]
 
 TRANSITION RULES:
   ✅ Can transition to IN_REVIEW when:
      - topic is defined and non-empty
      - At least one entry exists in examples_generated
      - All levels covered are listed in levels_covered
+     - key_decisions has at least 1 entry with a non-empty tradeoff
+     - risk_assessment is non-empty
   ❌ BLOCKED if:
      - No examples have been generated
      - topic is empty or missing
+     - key_decisions is missing or has empty tradeoffs
+     - risk_assessment is empty
 
 NOTE: Standalone agent — not part of a fixed invocation sequence.
 Invoked on-demand for learning and concept exploration sessions.
 Context Clarifier agent should be invoked first if the requested topic is ambiguous.
+```
+
+### Standalone Agent — Code Enhancement Advisor
+```
+ALLOWED:
+  - Read files and search codebase for full context ingestion
+  - Classify findings (Gap, Edge Case, Enhancement, Security, Performance)
+  - Present 2–3 fix options per finding with tradeoffs
+  - Apply user-selected edits to source files (one finding at a time, with confirmation)
+  - Track review session with todo list
+
+FORBIDDEN:
+  - Apply any edit without explicit per-finding user confirmation
+  - Edit auto-generated files (check for @generated, DO NOT EDIT markers)
+  - Execute terminal commands (build, test, run)
+  - Introduce new dependencies without user approval
+  - Apply more than one finding's fix in a single edit operation
+  - Mark any option as recommended in ask_questions popups
+
+ARTIFACT TYPE: "enhancement_report"
+REQUIRED FIELDS:
+  - target_files          : string[] (files reviewed)
+  - findings              : {id, title, type, severity, location, status: applied|skipped|pending}[]
+  - options_presented     : {finding_id, options: {label, description, tradeoffs}[]}[]
+  - applied_changes       : {finding_id, option_selected, lines_changed, file}[]
+  - skipped_findings      : {finding_id, reason}[]
+  - remaining_risks       : {finding_id, severity, reason}[]
+  - key_decisions         : {decision, alternatives_considered, tradeoffs, justification}[]
+  - risk_assessment       : {risk, impact, mitigation}[]
+
+TRANSITION RULES:
+  ✅ Can transition to IN_REVIEW when:
+     - target_files is non-empty
+     - findings has at least 1 entry
+     - All applied changes have option_selected populated
+     - key_decisions has at least 1 entry with a non-empty tradeoff
+     - risk_assessment is non-empty
+  ❌ BLOCKED if:
+     - No findings were surfaced
+     - target_files is empty
+     - Any applied change lacks option_selected
+     - key_decisions is missing or has empty tradeoffs
+     - risk_assessment is empty
+
+NOTE: Standalone agent — not part of a fixed invocation sequence.
+Invoked on-demand for code review and enhancement sessions.
+All edits require explicit per-finding user confirmation before application.
 ```
 
 ---
