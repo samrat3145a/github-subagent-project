@@ -325,6 +325,10 @@ Do **not** web-search inline during individual EC checks. Instead, during **Phas
 - **Can → IN_REVIEW** when: all 9 required fields are populated — `api_parity`, `data_mapping`, `error_handling`, `integration_points`, `opsgenie_alerting` (all 10 items), `edge_cases`, `summary`, `opsgenie_overall_status`, and `report_file`; Phase 8 web-verify batch is complete; no deprecated recommendations remain in the report
 - **BLOCKED** if: any of the 9 required fields is empty or missing, `opsgenie_alerting` has fewer than 10 items, `opsgenie_overall_status` is not set, or `report_file` path is not produced
 
+### Gates That Apply to Me
+- **CONTEXT_CLARIFICATION** (ADVISORY): If the migration scope is ambiguous (e.g., unclear which flows need reviewing, unclear success criteria, or multiple Python targets exist with no guidance), redirect to Context Clarifier before starting analysis. If all three input paths (MuleSoft, Python Lambda, ActiveBatch) are provided and the scope is clear, proceed to Step 0 directly — a `clarification_report` is not required in that case.
+- **CAPABILITY_CHECK** (every invocation): Task must fall within my ALLOWED operations
+
 ### Capability Boundaries
 - **ALLOWED**: Read files, search codebase, produce migration checklist, write the output report file (`.github/reports/migration_checklist_[timestamp].md`), web search for reference
 - **FORBIDDEN**: Edit or fix application code (MuleSoft XML or Python Lambda source), execute terminal commands, implement solutions, modify any file other than the report output
