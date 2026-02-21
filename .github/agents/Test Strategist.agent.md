@@ -145,9 +145,11 @@ Status: [Pass/Fail]
 ### Self-Validation Checklist (run before every handoff)
 - [ ] `coverage_target_percentage` >= 70
 - [ ] `edge_cases` is non-empty
-- [ ] At least 1 test level has entries
+- [ ] At least 1 test level (unit, integration, e2e, or performance) has entries
+- [ ] `mocking_strategy` is documented (not empty)
+- [ ] `test_data_strategy` is documented (not empty)
+- [ ] `regression_plan` is documented (not empty)
 - [ ] Strategy clarification phase was completed before execution
-- [ ] Every required field has a value
 - [ ] Artifact envelope metadata is complete (agent_id, artifact_type, project_id, version, timestamp, state_before, state_after, checksum)
 - [ ] No FORBIDDEN operations were performed
 
