@@ -53,8 +53,10 @@ test_strategy:
   □ edge_cases is non-empty
 
 performance_analysis:
-  □ At least 1 optimization_recommendation
-  □ expected_load_profile is fully specified
+  □ At least 1 optimization_recommendation provided
+  □ Each optimization_recommendation.expected_gain is quantified (not vague terms like "faster" or "better")
+  □ cost_impact_estimate contains a concrete metric (time, memory, cost, or throughput)
+  □ expected_load_profile is fully specified (input_size_n, dataset_scale, operation_frequency)
 
 governance_report:
   □ approval_status set
@@ -68,10 +70,13 @@ governance_report:
 - [ ] `agent_id` is my correct agent ID
 - [ ] `artifact_type` matches my declared artifact type
 - [ ] `project_id` matches the current project
+- [ ] `trace_id` is present and valid (single-agent runs may use auto-generated `trace_{agent_id}_{timestamp}`)
 - [ ] `version` is valid semver AND incremented from last version
 - [ ] `timestamp` is current ISO-8601
 - [ ] `state_before` reflects actual prior state
 - [ ] `state_after` is the correct target state
+- [ ] `retry_count` is present and within allowed range
+- [ ] `checksum` is present and valid for content
 
 ---
 

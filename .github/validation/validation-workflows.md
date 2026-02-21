@@ -19,6 +19,11 @@
 │  □ Read the task/handoff package completely       │
 │  □ Identify: What am I being asked to do?         │
 │  □ Identify: What artifacts should I produce?     │
+│  □ Confirm validation framework files accessible: │
+│    agent-validation-rules.md, validation-         │
+│    workflows.md, coordination-protocol-           │
+│    templates.md — if any are unreadable: STOP,   │
+│    report missing file, escalate to Copilot.      │
 │                                                   │
 │  STEP 2: CAPABILITY CHECK                         │
 │  □ Is this task in my ALLOWED list?               │
@@ -152,10 +157,13 @@ IF ANY CHECK FAILS:
 │  □ agent_id is set to my agent ID                   │
 │  □ artifact_type matches my declared type            │
 │  □ project_id matches current project                │
+│  □ trace_id is present and valid                      │
 │  □ version follows semver and is incremented         │
 │  □ timestamp is current ISO-8601                     │
 │  □ state_before reflects actual prior state          │
 │  □ state_after is the target transition state        │
+│  □ retry_count is present and within allowed range    │
+│  □ checksum is present and valid for content          │
 │                                                   │
 │  ✅ ALL PASSED → Transition artifact to IN_REVIEW   │
 │  ❌ ANY FAILED → Fix before transitioning            │

@@ -137,15 +137,35 @@ The validation integration section added to each agent follows this template:
 - [Gate name]: [what must be true before I can start]
 
 ### My Operating Workflow
-1. **Pre-Task**: Follow `.github/validation/validation-workflows.md` § Pre-Task
-2. **Execution**: Follow in-progress checkpoints at 25%, 50%, 75%
-3. **Completion**: Run artifact completion validation
-4. **Handoff**: Use template from `.github/validation/coordination-protocol-templates.md`
+0. **Todo List Setup**: Create a todo list tracking each step of your task
+1. **Input Validation**: Confirm the request is actionable before starting
+2. **Pre-Task**: Follow `.github/validation/validation-workflows.md` § Pre-Task Validation
+3. **Execution checkpoints** (name these per your task — generic examples):
+   - After initial analysis / approach confirmed (25%): confirm direction before proceeding
+   - After core work complete (50%): confirm quality and scope before finishing
+   - Before final assembly (75%): confirm all artifact fields populated, no gaps
+4. **Completion**: Run artifact completion validation — verify all required fields populated
+5. **Handoff**: Use appropriate template from `.github/validation/coordination-protocol-templates.md`
 
 ### My Handoff Responsibilities
-- **Receiving handoffs**: Validate package has all 12 required fields
+- **Receiving handoffs**: Validate package has all required handoff fields (see `coordination-protocol-templates.md` § Required Handoff Fields); confirm the field count matches your artifact contract in `agent-validation-rules.md`
 - **Sending handoffs**: Use appropriate template for my workflow type
 - **Signals**: Emit ARTIFACT_READY when my artifact reaches IN_REVIEW
+```
+
+### If a Validation Framework File is Inaccessible
+
+If an agent cannot read a validation file (e.g., `.github/validation/agent-validation-rules.md` is missing or unreadable):
+
+```
+1. DO NOT proceed with the task as if the rules don't apply
+2. Report the missing file immediately: "Cannot access [file path] — validation rules unavailable"
+3. Escalate to the Default Copilot agent with:
+   - Which file is missing
+   - What task was being attempted
+   - What validation step was blocked
+4. Do NOT self-interpret or improvise the validation rules from memory
+5. Resume only after the file is confirmed accessible
 ```
 
 ---

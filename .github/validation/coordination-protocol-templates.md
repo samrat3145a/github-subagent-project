@@ -14,8 +14,9 @@ When transferring work from one agent to another, the handing-off agent MUST pro
 ```
 HANDOFF PACKAGE:
 ├── handoff_id           : Unique identifier (format: "handoff_{from}_{to}_{timestamp}")
+├── trace_id             : Correlation ID for tracking across parallel agents
 ├── from_agent           : Agent ID producing the handoff
-├── to_agent             : Agent ID receiving the handoff
+├── to_agent             : Agent ID receiving the handoff (or array for parallel fork)
 ├── timestamp            : ISO-8601 when handoff was created
 ├── task_summary         : What was the original task
 ├── completed_work       : What has been done (list of deliverables)
@@ -249,6 +250,155 @@ RECOMMENDED NEXT STEPS:
   1. [Most likely resolution path]
   2. [Alternative approach]
   3. [Fallback option]
+```
+
+### Template F: Specification → Implementation Handoff
+```
+HANDOFF: Agent 6 (Instruction Upgrader) → Agent 2 (Code Architect)
+
+TASK SUMMARY:
+  [What specification was refined and what needs implementing]
+
+COMPLETED WORK:
+  - refined_specification produced (artifact_id: [X], spec_version: [X.Y.Z])
+  - All formal_requirements have priority assigned
+  - Acceptance criteria defined for every functional requirement
+  - Requirement traceability map populated
+
+REMAINING WORK:
+  - Implement per formal_requirements (IDs: [list])
+  - Satisfy all acceptance_criteria
+  - Document key decisions referencing requirement IDs
+
+DELIVERABLES:
+  - refined_specification: [reference/location]
+  - functional_requirements count: [N]
+  - non_functional_requirements count: [N]
+
+CONTEXT STATE:
+  - Phase: SPECIFICATION → IMPLEMENTATION
+  - Gate: SPEC_APPROVED ✅ satisfied
+  - Open requirements: NONE
+
+NEXT AGENT REQUIREMENTS:
+  - Read refined_specification in full before starting
+  - Trace every implementation decision to a requirement ID
+  - Populate architecture_design.key_decisions referencing requirement IDs
+
+SUCCESS CRITERIA:
+  [Copied from refined_specification.acceptance_criteria]
+```
+
+### Template G: Requirements → Specification Handoff
+```
+HANDOFF: [Any Agent or User] → Agent 6 (Instruction Upgrader)
+
+TASK SUMMARY:
+  [What instructions or requirements need upgrading and why]
+
+SOURCE ARTIFACT:
+  - Type: [instruction file / agent file / documentation / specification]
+  - Location: [file path or reference]
+  - Current version: [version or "unversioned"]
+
+REQUIRED CHANGES:
+  [Specific description of what needs changing — vague requests like "make it better" are invalid]
+  - Change 1: [description]
+  - Change 2: [description]
+
+CONTEXT:
+  - Why these changes are needed: [reason]
+  - Constraints on the upgrade: [any limitations]
+  - Target audience for the upgraded instructions: [who will use them]
+
+SUCCESS CRITERIA:
+  - All requested changes incorporated
+  - spec_version incremented
+  - All 7 refined_specification fields populated
+```
+
+### Template H: Efficiency → Implementation Handoff
+```
+HANDOFF: Agent 5 (Efficiency Analyzer) → Agent 2 (Code Architect)
+
+TASK SUMMARY:
+  [What was analyzed and what optimizations need implementing]
+
+COMPLETED WORK:
+  - performance_analysis produced (artifact_id: [X])
+  - [N] bottlenecks identified
+  - [N] optimization recommendations produced
+  - Expected load profile: input_size_n=[X], dataset_scale=[X], operation_frequency=[X]
+
+REMAINING WORK:
+  - Implement optimization recommendations (see list below)
+  - Maintain existing test coverage after changes
+  - Re-run efficiency analysis after implementation to verify improvement
+
+DELIVERABLES:
+  - performance_analysis artifact: [reference]
+  - Top recommendations:
+    1. [type]: [description] — expected gain: [quantified gain]
+    2. [type]: [description] — expected gain: [quantified gain]
+
+CONTEXT STATE:
+  - Phase: VALIDATION → IMPLEMENTATION (optimization pass)
+  - cost_impact_estimate: [value]
+  - Constraints: [any constraints that limit what can be optimized]
+
+NEXT AGENT REQUIREMENTS:
+  - Read performance_analysis artifact
+  - Implement recommendations in priority order
+  - Do NOT optimize code paths not listed as bottlenecks
+  - Document each optimization with the expected_gain from the analysis
+
+SUCCESS CRITERIA:
+  - All recommended optimizations applied or explicitly deferred with justification
+  - No new test regressions introduced
+```
+
+### Template I: MigrationReview → Implementation Handoff
+```
+HANDOFF: Mule-to-Python Reviewer → Agent 2 (Code Architect)
+
+TASK SUMMARY:
+  [What migration gaps were found that need implementing]
+
+COMPLETED WORK:
+  - migration_checklist produced (artifact_id: [X])
+  - opsgenie_overall_status: [COMPLETE | INCOMPLETE]
+  - Report file: [path to .github/reports/migration_checklist_[timestamp].md]
+
+REMAINING WORK:
+  - Implement all ❌ Missing items from the checklist
+  - Implement all ⚠️ Partial items to full completeness
+  - Items marked ⚠️ Manual Mapping Required require design decision before implementation
+
+DELIVERABLES:
+  - migration_checklist artifact: [reference]
+  - Report: [file path]
+  - Missing item count by category:
+    - API Parity: [N] missing
+    - Data Mapping: [N] missing
+    - Error Handling: [N] missing
+    - Integration Points: [N] missing
+    - OpsGenie Alerting: [N] missing
+
+CONTEXT STATE:
+  - MuleSoft source: [path]
+  - Python Lambda source: [path]
+  - ActiveBatch source: [path]
+  - OpsGenie status: [COMPLETE | INCOMPLETE — if INCOMPLETE, list missing items]
+
+NEXT AGENT REQUIREMENTS:
+  - Read full migration_checklist report before starting
+  - Prioritize OpsGenie items if opsgenie_overall_status is INCOMPLETE
+  - For ⚠️ Manual Mapping Required items: confirm approach with user before implementing
+
+SUCCESS CRITERIA:
+  - All ❌ Missing items implemented
+  - All ⚠️ Partial items completed
+  - opsgenie_overall_status = COMPLETE
 ```
 
 ---

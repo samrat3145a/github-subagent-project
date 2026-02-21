@@ -20,16 +20,12 @@ CONTEXT_CLARIFICATION
   │  Required: clarification_report artifact started
   │  Exit gate: CONTEXT_CLEAR checkpoint
   ▼
-RESEARCH
-  │  Agent 3 gathering documentation and references
-  │  Required: research_summary artifact started
-  │  Exit gate: RESEARCH_COMPLETE checkpoint
-  ▼
-SPECIFICATION
-  │  Agent 6 refining requirements into formal spec
-  │  Required: refined_specification artifact started
-  │  Exit gate: SPEC_APPROVED checkpoint
-  ▼
+RESEARCH & SPECIFICATION (FORK)
+  ├──► Agent 3 (Research) ──► research_summary
+  └──► Agent 6 (Spec)     ──► refined_specification
+  │
+  ▼ (JOIN)
+  │  Exit gate: RESEARCH_COMPLETE & SPEC_APPROVED checkpoints
 PLANNING
   │  Agent 4/8 creating execution plan
   │  Required: execution_plan artifact started
@@ -40,11 +36,12 @@ IMPLEMENTATION
   │  Required: architecture_design artifact + code
   │  Exit gate: IMPLEMENTATION_COMPLETE checkpoint
   ▼
-VALIDATION
-  │  Agent 5 + Agent 7 analyzing and testing
-  │  Required: performance_analysis + test_strategy artifacts
+VALIDATION (FORK)
+  ├──► Agent 5 (Efficiency) ──► performance_analysis
+  └──► Agent 7 (Testing)    ──► test_strategy
+  │
+  ▼ (JOIN)
   │  Exit gate: VALIDATION_PASSED checkpoint
-  ▼
 GOVERNANCE
   │  Agent 8 reviewing all artifacts for approval
   │  Required: governance_report artifact
@@ -231,6 +228,22 @@ MANUAL ROLLBACK (requires Coordinator approval):
   - User changes requirements significantly
   - Better approach discovered during implementation
   - External dependency becomes unavailable
+```
+
+### Corrupted Rollback Point
+
+If the rollback point itself is corrupted or missing (e.g., checksum mismatch on rollback state, file unreadable):
+
+```
+1. DO NOT attempt to restore from the corrupted point
+2. Classify as CRITICAL — escalate immediately to Default Copilot
+3. Include: which rollback point is corrupted, when it was created, what triggered the rollback attempt
+4. Search for the next-oldest valid rollback point:
+   - Work backwards through rollback history
+   - Use the most recent point whose checksum is intact
+5. Restore from that older point; document the gap (work done between old point and corrupted point may be lost)
+6. Notify all active agents of the state regression
+7. Re-execute the lost work from the restored point
 ```
 
 ---
