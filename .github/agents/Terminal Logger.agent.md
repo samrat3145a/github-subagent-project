@@ -155,17 +155,18 @@ logs/
 > Reference: `.github/validation/agent-validation-rules.md`
 
 ### My Artifact Contract
-- **Artifact Type**: `audit_log` (system monitoring artifact)
-- **Required Fields**:
+- **Artifact Type**: `terminal_log`
+- **Required Fields** (minimum baseline per `agent-validation-rules.md`):
+  - `session_id` — unique session identifier
+  - `command_executed` — actual command or query
+  - `output` — command output
+  - `exit_code` — execution result code
   - `timestamp` — ISO-8601 when logged
+- **Extended Fields** (logged in addition to minimum baseline):
   - `type` — enum (command|query|system|audit)
   - `event` — enum (pre-execution|post-execution|error|performance)
-  - `session_id` — unique session identifier
   - `agent_id` — which agent triggered the event
-  - `command` — actual command or query
-  - `exit_code` — execution result code
   - `execution_time_ms` — duration in milliseconds
-  - `output` — command output
   - `errors` — error messages if any
   - `metadata` — {agent_assignment, escalated, retry_count}
 
@@ -196,9 +197,13 @@ As the logging agent, I provide supporting evidence for the validation framework
 - **Document escalation chains** for error handling audit trails
 
 ### Self-Validation Checklist (run periodically)
+- [ ] `timestamp` is present and ISO-8601 formatted on every log entry
+- [ ] `command_executed` is present and non-empty on every log entry
+- [ ] `output` is captured (empty string is valid for silent commands)
+- [ ] `exit_code` is recorded on every log entry
+- [ ] `session_id` is present and unique per invocation
+- [ ] No sensitive information (secrets, tokens, passwords) exposed in logs
 - [ ] Log file structure follows declared format
-- [ ] All logged events have complete required fields
-- [ ] No sensitive information exposed in logs
 - [ ] Log rotation and cleanup are maintained
 - [ ] Audit trail is continuous with no gaps
 - [ ] No FORBIDDEN operations were performed
