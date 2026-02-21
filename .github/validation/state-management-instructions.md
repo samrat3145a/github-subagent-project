@@ -20,12 +20,16 @@ CONTEXT_CLARIFICATION
   │  Required: clarification_report artifact started
   │  Exit gate: CONTEXT_CLEAR checkpoint
   ▼
-RESEARCH & SPECIFICATION (FORK)
-  ├──► Agent 3 (Research) ──► research_summary
-  └──► Agent 6 (Spec)     ──► refined_specification
-  │
-  ▼ (JOIN)
-  │  Exit gate: RESEARCH_COMPLETE & SPEC_APPROVED checkpoints
+RESEARCH
+  │  Agent 3 gathering documentation and references
+  │  Required: research_summary artifact started
+  │  Exit gate: RESEARCH_COMPLETE checkpoint
+  ▼
+SPECIFICATION
+  │  Agent 6 refining requirements into formal spec
+  │  Required: refined_specification artifact started
+  │  Exit gate: SPEC_APPROVED checkpoint
+  ▼
 PLANNING
   │  Agent 4/8 creating execution plan
   │  Required: execution_plan artifact started
