@@ -15,19 +15,29 @@ ARTIFACT ENVELOPE (MANDATORY):
 ├── agent_id          : Which agent produced this (e.g., "agent_1")
 ├── artifact_type     : What was produced (must match agent's allowed types)
 ├── project_id        : Which project this belongs to
+├── trace_id          : Correlation ID (required for both multi-agent and single-agent runs)
 ├── version           : Semantic version (MAJOR.MINOR.PATCH)
 ├── timestamp         : ISO-8601 when produced
 ├── state_before      : State at time of creation
 ├── state_after       : State after production
+├── retry_count       : Number of attempts (0 for first try, max 3)
 ├── checksum          : SHA-256 of content (for integrity)
 └── content           : The actual artifact payload (type-specific)
 ```
+
+### Trace ID Policy
+- `trace_id` remains mandatory to keep artifact lineage consistent.
+- For **multi-agent** workflows: use a shared correlation ID across all related artifacts and handoffs.
+- For **single-agent** workflows: generate a local trace ID at start and reuse it for all artifacts in that run.
+- Recommended single-agent format: `trace_{agent_id}_{timestamp}` (example: `trace_agent_2_2026-02-21T12:30:00Z`).
 
 ### State Lifecycle
 ```
 DRAFT → IN_REVIEW → VALIDATED → APPROVED → COMPLETE
   │         │           │          │
-  └─────────┴───────────┴──────────┴──→ REJECTED (can return to DRAFT)
+  └─────────┴───────────┴──────────┴──→ REJECTED (can return to DRAFT if retry_count < 3)
+                                          │
+                                          └──→ ESCALATED_TO_HUMAN (if retry_count >= 3)
 ```
 
 ### State Transition Rules
@@ -35,7 +45,8 @@ DRAFT → IN_REVIEW → VALIDATED → APPROVED → COMPLETE
 - `IN_REVIEW → VALIDATED`: Peer agent review passes, no blocking violations
 - `VALIDATED → APPROVED`: Coordinator (Agent 8) or Orchestrator (Agent 4) signs off
 - `APPROVED → COMPLETE`: All downstream dependencies satisfied
-- `ANY → REJECTED`: Blocking violation detected, must return to DRAFT with fixes
+- `ANY → REJECTED`: Blocking violation detected, must return to DRAFT with fixes (increment retry_count)
+- `REJECTED → ESCALATED_TO_HUMAN`: Circuit breaker tripped (retry_count >= 3), halt automated execution
 
 ---
 
@@ -70,14 +81,17 @@ REQUIRED FIELDS:
   - open_questions           : string[] (remaining unknowns)
   - risk_flags               : {type, description, severity}[]
   - completeness_score       : number (0-100)
+  - solution_plan            : structured step-by-step plan derived from clarified requirements
 
 TRANSITION RULES:
   ✅ Can transition to IN_REVIEW when:
      - open_questions is EMPTY (all questions resolved)
      - completeness_score >= 80
+     - solution_plan is present with at least 1 numbered, actionable step
   ❌ BLOCKED if:
      - open_questions has any entries
      - completeness_score < 80
+     - solution_plan is missing or empty
 ```
 
 ### Agent 2 — Code Architect
@@ -113,6 +127,21 @@ TRANSITION RULES:
      - Any key_decision has empty tradeoffs
      - risk_assessment is empty
      - CONTEXT_CLEAR checkpoint not satisfied
+
+ARCHITECTURE QUALITY SCORE (0-100):
+  This rubric is used for architecture quality checks and retakes.
+  - Artifact contract completeness (all 7 required fields meaningful): 30 pts
+  - Transition-rule readiness (tradeoffs, risks, components): 20 pts
+  - Workflow + gate compliance (CONTEXT_CLEAR, RESEARCH_COMPLETE when applicable, checkpoints): 20 pts
+  - Handoff readiness (Implementation→Testing/Efficiency package quality): 15 pts
+  - Metadata envelope completeness (agent_id, artifact_type, project_id, trace_id, version,
+    timestamp, state_before, state_after, retry_count, checksum): 15 pts
+
+  Scoring guidance:
+  - 100: All five areas fully satisfied with no inconsistencies
+  - 90-99: Minor documentation/consistency gaps only
+  - 70-89: One major area partially satisfied
+  - <70: Multiple required areas missing or blocked
 ```
 
 ### Agent 3 — Documentation Researcher
@@ -195,19 +224,19 @@ ARTIFACT TYPE: "performance_analysis"
 REQUIRED FIELDS:
   - time_complexity_analysis    : string[]
   - space_complexity_analysis   : string[]
-  - expected_load_profile       : {concurrent_users, peak_requests_per_second}
+  - expected_load_profile       : {input_size_n, dataset_scale, operation_frequency}
   - bottleneck_predictions      : string[]
   - optimization_recommendations: {type, description, expected_gain}[]
-  - cost_impact_estimate        : string
+      - description must name: (1) current approach, (2) proposed approach, (3) why it's better
+      - expected_gain must be quantified (e.g., "O(n²) → O(n log n)", "saves ~200ms at n=10k") — vague terms like "faster" or "better" are not acceptable
+  - cost_impact_estimate        : string (must include a concrete metric: time, memory, cost, or throughput)
 
 TRANSITION RULES:
-  ✅ Can transition to IN_REVIEW when:
-     - At least 1 optimization_recommendation provided
-     - expected_load_profile is fully specified
-     - time_complexity_analysis is non-empty
-  ❌ BLOCKED if:
-     - No optimization recommendations
-     - Load profile is missing
+  ✅ Can transition to IN_REVIEW when: all 6 required fields populated — time_complexity_analysis,
+     space_complexity_analysis, expected_load_profile, bottleneck_predictions,
+     optimization_recommendations (at least 1), and cost_impact_estimate;
+     all optimization_recommendations[].expected_gain are quantified; cost_impact_estimate includes a concrete metric
+  ❌ BLOCKED if: any of the 6 required fields is empty or missing, or any expected_gain is vague, or cost_impact_estimate lacks a concrete metric
 ```
 
 ### Agent 6 — Instruction Upgrader
@@ -234,13 +263,10 @@ REQUIRED FIELDS:
   - spec_version               : semver
 
 TRANSITION RULES:
-  ✅ Can transition to IN_REVIEW when:
-     - All formal_requirements have a priority assigned
-     - At least 1 acceptance_criteria per functional_requirement
-     - spec_version follows semver format
-  ❌ BLOCKED if:
-     - Any formal_requirement missing priority
-     - Functional requirements lack acceptance criteria
+  ✅ Can transition to IN_REVIEW when: all 7 required fields populated — refined_scope,
+     formal_requirements (all with priority), functional_requirements, non_functional_requirements,
+     acceptance_criteria (≥1 per functional requirement), requirement_traceability, spec_version (semver format)
+  ❌ BLOCKED if: any of the 7 required fields is empty or missing
 ```
 
 ### Agent 7 — Test Strategist
@@ -318,6 +344,99 @@ FORBIDDEN:
   - Make decisions about implementation
   - Modify production code
   - Override other agents' decisions
+
+ARTIFACT TYPE: "terminal_log"
+REQUIRED FIELDS:
+  - session_id         : string (unique per invocation)
+  - command_executed   : string
+  - output             : string
+  - exit_code          : number
+  - timestamp          : ISO-8601
+
+NOTE: terminal_log entries are written directly — no IN_REVIEW gate required.
+BLOCKED if: command_executed or output is missing.
+```
+
+### Standalone Agent — DSA Interview Coach
+```
+ALLOWED:
+  - Ask MCQ questions via ask_questions tool (non-code) or chat (code-related)
+  - Search web for DSA references and answer verification
+  - Produce session assessment reports
+  - Use todo list for session tracking
+  - Read files for context
+
+FORBIDDEN:
+  - Create or edit project files
+  - Execute terminal commands
+  - Implement solutions
+  - Set recommended options on quiz questions
+
+ARTIFACT TYPE: "dsa_assessment"
+REQUIRED FIELDS:
+  - overall_score        : {correct: number, total: number, percentage: number}
+  - difficulty_range     : {start: enum, end: enum, adaptations: number}
+  - topic_scores         : {topic, questions_asked, correct, percentage}[]
+  - weak_areas           : {topic, description, recommended_problems}[]
+  - strong_areas         : string[]
+  - recommendations      : {leetcode_problems: string[], concepts_to_review: string[], next_session_focus: string}
+  - questions_asked      : number
+  - hints_used           : number
+  - early_stop           : boolean
+
+TRANSITION RULES:
+  ✅ Can transition to IN_REVIEW when:
+     - At least 5 questions were asked and answered
+     - overall_score is calculated
+     - weak_areas is populated (empty list acceptable if no weak areas)
+  ❌ BLOCKED if:
+     - Fewer than 5 questions answered
+     - Scores not calculated
+
+NOTE: Standalone agent — not part of a fixed invocation sequence.
+Invoked on-demand for interview preparation sessions.
+```
+
+### Standalone Agent — Workspace Quizmaster
+```
+ALLOWED:
+  - Read files and search codebase (silent scan)
+  - Ask MCQ questions via ask_questions tool
+  - Produce knowledge assessment reports
+  - Use todo list for tracking
+
+FORBIDDEN:
+  - Create or edit project files
+  - Execute terminal commands
+  - Implement solutions
+  - Reveal answers during the quiz
+  - Set recommended options on quiz questions
+
+ARTIFACT TYPE: "knowledge_assessment"
+REQUIRED FIELDS:
+  - overall_score        : number (0-100)
+  - rating               : enum (expert|proficient|developing|needs-review)
+  - area_scores          : {area, score, max_score, questions_asked, correct, gaps}[]
+  - knowledge_gaps       : {title, description, review_file}[]
+  - strengths            : string[]
+  - recommendations      : string[]
+  - questions_asked      : number
+  - questions_correct    : number
+  - early_stop           : boolean
+
+TRANSITION RULES:
+  ✅ Can transition to IN_REVIEW when:
+     - Workspace scan was performed before any questions were asked
+     - At least 5 questions were asked and answered
+     - overall_score is calculated
+     - knowledge_gaps is populated (empty list acceptable if no gaps found)
+  ❌ BLOCKED if:
+     - Fewer than 5 questions answered
+     - Workspace scan was skipped
+     - Score not calculated
+
+NOTE: Standalone agent — not part of a fixed invocation sequence.
+Invoked on-demand to assess a user's understanding of their workspace.
 ```
 
 ---
@@ -368,6 +487,11 @@ CHECK:
   □ Requested task falls within agent's ALLOWED list
   □ Task does NOT match any FORBIDDEN operation
   □ Required tools are available to the agent
+
+BYPASS CONDITIONS (none — this gate has no bypass):
+  CAPABILITY_CHECK is enforced on every invocation without exception.
+  If the task falls outside ALLOWED operations, redirect to the appropriate agent.
+  Do NOT attempt the task and do NOT ask the user to override this gate.
 ```
 
 ---
@@ -410,6 +534,32 @@ MANDATORY SEQUENCE:
   2. Agent 2 (Code Architect)       → Implement refactoring
   3. Agent 7 (Test Strategist)      → Verify no regressions
   4. Agent 5 (Efficiency Analyzer)  → Verify improvement
+```
+
+### For Migration Review (MuleSoft → Python)
+```
+MANDATORY SEQUENCE:
+  1. Mule-to-Python Reviewer        → Produces: migration_checklist + report file
+  2. Agent 2 (Code Architect)       → Implement all ❌ Missing and ⚠️ Partial items
+  3. Agent 7 (Test Strategist)      → Verify migrated Lambda code
+  4. Agent 8 (Team Coordinator)     → Governance review
+
+Note: Agent 1 (Context Clarifier) should be invoked first if MuleSoft and Python
+paths are not yet known or the migration scope is ambiguous.
+```
+
+### Agent 9 — Terminal Logger: Invocation Notes
+```
+Agent 9 is invoked ON-DEMAND (not in a fixed sequence position).
+TRIGGER: Any agent that needs to log terminal command execution.
+
+INVOKED BY:
+  - Agent 2 (Code Architect): when running build/test commands
+  - Agent 7 (Test Strategist): when executing test suites
+  - Agent 4 (Orchestrator): when tracking system health
+
+Agent 9 does NOT block any dependency gate and has no exit checkpoint.
+It operates in parallel with any agent that executes terminal commands.
 ```
 
 ---
