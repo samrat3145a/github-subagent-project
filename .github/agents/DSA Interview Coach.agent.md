@@ -415,10 +415,14 @@ Never repeat the same question or concept within a session:
   - `questions_asked` — number
   - `hints_used` — number
   - `early_stop` — boolean
+  - `key_decisions` — {decision, alternatives_considered, tradeoffs, justification}[]
+    *Example:* `{decision: "Escalated to Hard after 3 consecutive correct answers at Medium", alternatives_considered: ["Stay at Medium for more reinforcement", "Escalate to Hard"], tradeoffs: "Harder questions risk discouragement; staying risks under-challenging the user", justification: "User scored 3/3 at Medium — adaptation rules require escalation"}`
+  - `risk_assessment` — {risk, impact, mitigation}[]
+    *Example:* `{risk: "Code tracing question may have subtle off-by-one in expected output", impact: "incorrect scoring", mitigation: "Web-verified expected output against GeeksForGeeks before presenting"}`
 
 ### Transition Rules
-- **Can → IN_REVIEW** when: at least 5 questions asked AND answered, scores calculated, weak_areas populated (even if empty)
-- **BLOCKED** if: fewer than 5 questions answered, scores not calculated
+- **Can → IN_REVIEW** when: at least 5 questions asked AND answered, scores calculated, weak_areas populated (even if empty), `key_decisions` has ≥1 entry with a documented tradeoff, `risk_assessment` is non-empty
+- **BLOCKED** if: fewer than 5 questions answered, scores not calculated, `key_decisions` is missing or has empty tradeoffs
 
 ### Gates That Apply to Me
 - **CONTEXT_CLARIFICATION** (ADVISORY): If the coaching scope is completely unclear (e.g., no topic, difficulty, or goal can be inferred from the request), redirect to Context Clarifier before starting. For standard DSA prep requests, Phase 1 (scope confirmation with the user) handles ambiguity internally — a `clarification_report` is not required in that case.
@@ -444,6 +448,27 @@ Never repeat the same question or concept within a session:
 3. **Completion**: Produce scored performance report (Phase 3)
 4. **Handoff**: Use appropriate template from `.github/validation/coordination-protocol-templates.md`
 
+### My Handoff Responsibilities
+- **Receiving**: Can be invoked directly by a user or by the Orchestrator/Team Coordinator — if invoked via handoff, validate that the session scope (topic, difficulty, session length) is present in the incoming package
+- **Sending handoffs**: Include `dsa_assessment` artifact with full scores, weak areas, and recommendations; use appropriate template from `.github/validation/coordination-protocol-templates.md`
+- **Signals**: Emit `ARTIFACT_READY` when `dsa_assessment` reaches `IN_REVIEW`; emit `CHECKPOINT_COMPLETE` after each 25%/50%/75% session milestone
+
+### Metadata Envelope (Mandatory before emitting any artifact)
+Before emitting the final `dsa_assessment`, populate the global artifact envelope:
+```
+agent_id      : "dsa_interview_coach"
+artifact_type : "dsa_assessment"
+project_id    : [current workspace/project identifier]
+trace_id      : trace_dsa_interview_coach_{ISO-8601-timestamp}
+version       : "1.0.0"
+timestamp     : [ISO-8601 when session completed]
+state_before  : "DRAFT"
+state_after   : "IN_REVIEW"
+retry_count   : 0
+checksum      : [SHA-256 of content]
+```
+If any envelope field is missing, the artifact is **INVALID** and must not be emitted.
+
 ### Self-Validation Checklist (run before every handoff)
 - [ ] At least 5 questions were asked and answered
 - [ ] `overall_score.correct`, `overall_score.total`, and `overall_score.percentage` are all populated
@@ -458,6 +483,9 @@ Never repeat the same question or concept within a session:
 - [ ] No `recommended` options were set on quiz questions (FORBIDDEN check)
 - [ ] All questions were factually correct (verified via web search if uncertain)
 - [ ] Answers were revealed after each question (not withheld)
+- [ ] `key_decisions` has at least 1 entry with a documented tradeoff
+- [ ] `risk_assessment` is non-empty
+- [ ] Artifact envelope metadata is complete (`agent_id`, `artifact_type`, `project_id`, `trace_id`, `version`, `timestamp`, `state_before`, `state_after`, `retry_count`, `checksum`)
 - [ ] No FORBIDDEN operations were performed
 
 ## Error Handling & Escalation Protocol:

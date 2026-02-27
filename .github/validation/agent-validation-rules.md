@@ -82,16 +82,19 @@ REQUIRED FIELDS:
   - risk_flags               : {type, description, severity}[]
   - completeness_score       : number (0-100)
   - solution_plan            : structured step-by-step plan derived from clarified requirements
+  - key_decisions            : {decision, alternatives_considered, tradeoffs, justification}[]
 
 TRANSITION RULES:
   ✅ Can transition to IN_REVIEW when:
      - open_questions is EMPTY (all questions resolved)
      - completeness_score >= 80
      - solution_plan is present with at least 1 numbered, actionable step
+     - key_decisions has at least 1 entry with a non-empty tradeoff
   ❌ BLOCKED if:
      - open_questions has any entries
      - completeness_score < 80
      - solution_plan is missing or empty
+     - key_decisions is missing or has empty tradeoffs
 ```
 
 ### Agent 2 — Code Architect
@@ -165,15 +168,21 @@ REQUIRED FIELDS:
   - recommended_patterns     : string[]
   - comparative_analysis     : {option, pros, cons, fit_score}[]
   - gaps_or_uncertainties    : string[]
+  - key_decisions             : {decision, alternatives_considered, tradeoffs, justification}[]
+  - risk_assessment           : {risk, impact, mitigation}[]
 
 TRANSITION RULES:
   ✅ Can transition to IN_REVIEW when:
      - sources has at least 2 entries
      - comparative_analysis has at least 1 entry
      - All sources have credibility_score > 0
+     - key_decisions has at least 1 entry with a non-empty tradeoff
+     - risk_assessment is non-empty
   ❌ BLOCKED if:
      - Fewer than 2 sources
      - No comparative analysis provided
+     - key_decisions is missing or has empty tradeoffs
+     - risk_assessment is empty
 ```
 
 ### Agent 4 — Orchestrator
@@ -196,15 +205,20 @@ REQUIRED FIELDS:
   - parallelizable_tasks     : string[] (task IDs)
   - milestones               : string[]
   - rollback_strategy        : string
+  - key_decisions             : {decision, alternatives_considered, tradeoffs, justification}[]
+  - risk_assessment           : {risk, impact, mitigation}[]
 
 TRANSITION RULES:
   ✅ Can transition to IN_REVIEW when:
      - No circular dependencies in task_breakdown
      - Every task has an assigned_agent
      - At least 1 milestone defined
+     - key_decisions has at least 1 entry with a non-empty tradeoff
+     - risk_assessment is non-empty
   ❌ BLOCKED if:
      - Circular dependency detected
      - Any task missing assigned_agent
+     - key_decisions is missing or has empty tradeoffs
 ```
 
 ### Agent 5 — Efficiency Analyzer
@@ -230,13 +244,16 @@ REQUIRED FIELDS:
       - description must name: (1) current approach, (2) proposed approach, (3) why it's better
       - expected_gain must be quantified (e.g., "O(n²) → O(n log n)", "saves ~200ms at n=10k") — vague terms like "faster" or "better" are not acceptable
   - cost_impact_estimate        : string (must include a concrete metric: time, memory, cost, or throughput)
+  - key_decisions               : {decision, alternatives_considered, tradeoffs, justification}[]
+  - risk_assessment             : {risk, impact, mitigation}[]
 
 TRANSITION RULES:
   ✅ Can transition to IN_REVIEW when: all 6 required fields populated — time_complexity_analysis,
      space_complexity_analysis, expected_load_profile, bottleneck_predictions,
      optimization_recommendations (at least 1), and cost_impact_estimate;
-     all optimization_recommendations[].expected_gain are quantified; cost_impact_estimate includes a concrete metric
-  ❌ BLOCKED if: any of the 6 required fields is empty or missing, or any expected_gain is vague, or cost_impact_estimate lacks a concrete metric
+     all optimization_recommendations[].expected_gain are quantified; cost_impact_estimate includes a concrete metric;
+     key_decisions has at least 1 entry with a non-empty tradeoff; risk_assessment is non-empty
+  ❌ BLOCKED if: any of the 6 required fields is empty or missing, or any expected_gain is vague, or cost_impact_estimate lacks a concrete metric, or key_decisions is missing or has empty tradeoffs, or risk_assessment is empty
 ```
 
 ### Agent 6 — Instruction Upgrader
@@ -261,12 +278,15 @@ REQUIRED FIELDS:
   - acceptance_criteria        : string[]
   - requirement_traceability   : {original_reference, mapped_requirement_id}[]
   - spec_version               : semver
+  - key_decisions              : {decision, alternatives_considered, tradeoffs, justification}[]
+  - risk_assessment            : {risk, impact, mitigation}[]
 
 TRANSITION RULES:
   ✅ Can transition to IN_REVIEW when: all 7 required fields populated — refined_scope,
      formal_requirements (all with priority), functional_requirements, non_functional_requirements,
-     acceptance_criteria (≥1 per functional requirement), requirement_traceability, spec_version (semver format)
-  ❌ BLOCKED if: any of the 7 required fields is empty or missing
+     acceptance_criteria (≥1 per functional requirement), requirement_traceability, spec_version (semver format);
+     key_decisions has at least 1 entry with a non-empty tradeoff; risk_assessment is non-empty
+  ❌ BLOCKED if: any of the 7 required fields is empty or missing, or key_decisions is missing or has empty tradeoffs, or risk_assessment is empty
 ```
 
 ### Agent 7 — Test Strategist
@@ -290,15 +310,21 @@ REQUIRED FIELDS:
   - coverage_target_percentage: number (0-100)
   - test_data_strategy       : string
   - regression_plan          : string
+  - key_decisions             : {decision, alternatives_considered, tradeoffs, justification}[]
+  - risk_assessment           : {risk, impact, mitigation}[]
 
 TRANSITION RULES:
   ✅ Can transition to IN_REVIEW when:
      - coverage_target_percentage >= 70
      - edge_cases is non-empty
      - At least 1 test level has entries
+     - key_decisions has at least 1 entry with a non-empty tradeoff
+     - risk_assessment is non-empty
   ❌ BLOCKED if:
      - coverage_target_percentage < 70
      - edge_cases is empty
+     - key_decisions is missing or has empty tradeoffs
+     - risk_assessment is empty
 ```
 
 ### Agent 8 — Team Coordinator
@@ -321,15 +347,20 @@ REQUIRED FIELDS:
   - quality_gate_results     : {gate_name, status, notes}[]
   - policy_violations        : string[]
   - approval_status          : enum (approved|rejected|needs_revision)
+  - key_decisions             : {decision, alternatives_considered, tradeoffs, justification}[]
+  - risk_assessment           : {risk, impact, mitigation}[]
 
 TRANSITION RULES:
   ✅ Can reach COMPLETE when:
      - approval_status is "approved"
      - artifact_chain_integrity is "valid"
      - All quality_gate_results have status "pass"
+     - key_decisions has at least 1 entry with a non-empty tradeoff
+     - risk_assessment is non-empty
   ❌ BLOCKED if:
      - approval_status is not "approved"
      - Any quality gate has status "fail"
+     - key_decisions is missing or has empty tradeoffs
 ```
 
 ### Agent 9 — Terminal Logger
@@ -352,9 +383,18 @@ REQUIRED FIELDS:
   - output             : string
   - exit_code          : number
   - timestamp          : ISO-8601
+  - key_decisions      : {decision, alternatives_considered, tradeoffs, justification}[]
+  - risk_assessment    : {risk, impact, mitigation}[]
 
-NOTE: terminal_log entries are written directly — no IN_REVIEW gate required.
-BLOCKED if: command_executed or output is missing.
+TRANSITION RULES:
+  ✅ Can transition to IN_REVIEW when:
+     - session_id is set and unique
+     - command_executed is non-empty
+     - exit_code is recorded
+     - timestamp is ISO-8601 formatted
+     - key_decisions has at least 1 entry with a non-empty tradeoff
+     - risk_assessment is non-empty
+BLOCKED if: command_executed or output is missing, key_decisions is missing or has empty tradeoffs, risk_assessment is empty.
 ```
 
 ### Standalone Agent — DSA Interview Coach
@@ -383,15 +423,21 @@ REQUIRED FIELDS:
   - questions_asked      : number
   - hints_used           : number
   - early_stop           : boolean
+  - key_decisions        : {decision, alternatives_considered, tradeoffs, justification}[]
+  - risk_assessment      : {risk, impact, mitigation}[]
 
 TRANSITION RULES:
   ✅ Can transition to IN_REVIEW when:
      - At least 5 questions were asked and answered
      - overall_score is calculated
      - weak_areas is populated (empty list acceptable if no weak areas)
+     - key_decisions has at least 1 entry with a non-empty tradeoff
+     - risk_assessment is non-empty
   ❌ BLOCKED if:
      - Fewer than 5 questions answered
      - Scores not calculated
+     - key_decisions is missing or has empty tradeoffs
+     - risk_assessment is empty
 
 NOTE: Standalone agent — not part of a fixed invocation sequence.
 Invoked on-demand for interview preparation sessions.
@@ -423,6 +469,8 @@ REQUIRED FIELDS:
   - questions_asked      : number
   - questions_correct    : number
   - early_stop           : boolean
+  - key_decisions        : {decision, alternatives_considered, tradeoffs, justification}[]
+  - risk_assessment      : {risk, impact, mitigation}[]
 
 TRANSITION RULES:
   ✅ Can transition to IN_REVIEW when:
@@ -430,16 +478,68 @@ TRANSITION RULES:
      - At least 5 questions were asked and answered
      - overall_score is calculated
      - knowledge_gaps is populated (empty list acceptable if no gaps found)
+     - key_decisions has at least 1 entry with a non-empty tradeoff
+     - risk_assessment is non-empty
   ❌ BLOCKED if:
      - Fewer than 5 questions answered
      - Workspace scan was skipped
      - Score not calculated
+     - key_decisions is missing or has empty tradeoffs
+     - risk_assessment is empty
 
 NOTE: Standalone agent — not part of a fixed invocation sequence.
 Invoked on-demand to assess a user's understanding of their workspace.
 ```
 
-### Standalone Agent — Example Agent
+### Standalone Agent — Mule-to-Python Reviewer
+```
+ALLOWED:
+  - Read MuleSoft XML flow files and Python Lambda code
+  - Search codebase for related files and configurations
+  - Produce migration checklist (per-item ✅/❌/⚠️ status)
+  - Write the output report file (.github/reports/migration_checklist_[timestamp].md)
+  - Web search for library/service verification (Phase 8 batch only)
+
+FORBIDDEN:
+  - Edit or fix application code (MuleSoft XML or Python Lambda source)
+  - Execute terminal commands
+  - Implement solutions
+  - Modify any file other than the report output
+
+ARTIFACT TYPE: "migration_checklist"
+REQUIRED FIELDS:
+  - api_parity             : {endpoint, method, schema, status_code, present}[]
+  - data_mapping           : {field, transformation, type_conversion, present}[]
+  - error_handling         : {scope, strategy, retry_policy, logging, present}[]
+  - integration_points     : {connector, target, config, present}[]
+  - opsgenie_alerting      : {check, mulesoft_impl, python_impl, present}[] (mandatory — must always be populated, exactly 10 items)
+  - edge_cases             : {type, description, severity, flagged}[]
+  - summary                : {category, total, missing, partial, score}[]
+  - opsgenie_overall_status: enum (COMPLETE | INCOMPLETE)
+  - report_file            : string (path to saved report)
+  - key_decisions          : {decision, alternatives_considered, tradeoffs, justification}[]
+  - risk_assessment        : {risk, impact, mitigation}[]
+
+TRANSITION RULES:
+  ✅ Can transition to IN_REVIEW when:
+     - All 9 required fields are populated
+     - opsgenie_alerting has exactly 10 items
+     - opsgenie_overall_status is set to COMPLETE or INCOMPLETE
+     - report_file path is populated and file has been written
+     - Phase 8 web-verify batch is complete
+     - key_decisions has at least 1 entry with a non-empty tradeoff
+     - risk_assessment is non-empty
+  ❌ BLOCKED if:
+     - Any of the 9 required fields is empty or missing
+     - opsgenie_alerting has fewer than 10 items
+     - opsgenie_overall_status is not set
+     - report_file path is not produced
+     - key_decisions is missing or has empty tradeoffs
+     - risk_assessment is empty
+
+NOTE: Standalone agent — invoked directly by user or via Migration Review pipeline.
+All three input paths (MuleSoft, Python Lambda, ActiveBatch) must be provided before analysis begins.
+```
 ```
 ALLOWED:
   - Generate examples and explain concepts at ELI5, Intermediate, and Advanced levels

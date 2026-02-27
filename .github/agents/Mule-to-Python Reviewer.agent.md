@@ -320,10 +320,14 @@ Do **not** web-search inline during individual EC checks. Instead, during **Phas
   - `summary` — {category, total, missing, partial, score}[]
   - `opsgenie_overall_status` — enum (COMPLETE | INCOMPLETE) **(INCOMPLETE if any item is ❌ Missing)**
   - `report_file` — string (path to saved report)
+  - `key_decisions` — {decision, alternatives_considered, tradeoffs, justification}[]
+    *Example:* `{decision: "Flagged OpsGenie alerting as INCOMPLETE despite partial Python implementation", alternatives_considered: ["Mark as PARTIAL", "Mark as INCOMPLETE"], tradeoffs: "INCOMPLETE is stricter but ensures all 10 mandatory items are explicitly verified", justification: "alias deduplication key was absent — mandatory item per verification table"}`
+  - `risk_assessment` — {risk, impact, mitigation}[]
+    *Example:* `{risk: "Complex DataWeave block has no Python equivalent described by user", impact: "❌ Missing in checklist with no mitigation path", mitigation: "Flagged in Phase 4 Q&A; awaiting user input before cross-referencing"}`
 
 ### Transition Rules
-- **Can → IN_REVIEW** when: all 9 required fields are populated — `api_parity`, `data_mapping`, `error_handling`, `integration_points`, `opsgenie_alerting` (all 10 items), `edge_cases`, `summary`, `opsgenie_overall_status`, and `report_file`; Phase 8 web-verify batch is complete; no deprecated recommendations remain in the report
-- **BLOCKED** if: any of the 9 required fields is empty or missing, `opsgenie_alerting` has fewer than 10 items, `opsgenie_overall_status` is not set, or `report_file` path is not produced
+- **Can → IN_REVIEW** when: all 9 required fields are populated — `api_parity`, `data_mapping`, `error_handling`, `integration_points`, `opsgenie_alerting` (all 10 items), `edge_cases`, `summary`, `opsgenie_overall_status`, and `report_file`; Phase 8 web-verify batch is complete; no deprecated recommendations remain in the report; `key_decisions` has ≥1 entry with a documented tradeoff; `risk_assessment` is non-empty
+- **BLOCKED** if: any of the 9 required fields is empty or missing, `opsgenie_alerting` has fewer than 10 items, `opsgenie_overall_status` is not set, or `report_file` path is not produced, or `key_decisions` is missing or has empty tradeoffs
 
 ### Gates That Apply to Me
 - **CONTEXT_CLARIFICATION** (ADVISORY): If the migration scope is ambiguous (e.g., unclear which flows need reviewing, unclear success criteria, or multiple Python targets exist with no guidance), redirect to Context Clarifier before starting analysis. If all three input paths (MuleSoft, Python Lambda, ActiveBatch) are provided and the scope is clear, proceed to Step 0 directly — a `clarification_report` is not required in that case.
@@ -336,7 +340,23 @@ Do **not** web-search inline during individual EC checks. Instead, during **Phas
 ### My Handoff Responsibilities
 - **Receiving handoffs**: This agent is invoked directly by a user with file paths — there is no upstream agent handoff in this pipeline. If invoked via handoff, validate that MuleSoft path, Python Lambda path, and ActiveBatch path are all present in the incoming package.
 - **Sending handoffs**: Use the **`MigrationReview→Implementation`** template from `.github/validation/coordination-protocol-templates.md`; include the `migration_checklist` artifact, the report file path, and `opsgenie_overall_status`
-- **Signals**: Emit `ARTIFACT_READY` when `migration_checklist` reaches `IN_REVIEW`
+- **Signals**: Emit `ARTIFACT_READY` when `migration_checklist` reaches `IN_REVIEW`; emit `CHECKPOINT_COMPLETE` after each 25%/50%/75% phase milestone
+
+### Metadata Envelope (Mandatory before emitting any artifact)
+Before emitting the final `migration_checklist`, populate the global artifact envelope:
+```
+agent_id      : "mule_to_python_reviewer"
+artifact_type : "migration_checklist"
+project_id    : [current workspace/project identifier]
+trace_id      : trace_mule_to_python_reviewer_{ISO-8601-timestamp}
+version       : "1.0.0"
+timestamp     : [ISO-8601 when session completed]
+state_before  : "DRAFT"
+state_after   : "IN_REVIEW"
+retry_count   : 0
+checksum      : [SHA-256 of content]
+```
+If any envelope field is missing, the artifact is **INVALID** and must not be emitted.
 
 ### Self-Validation Checklist (run before every handoff)
 - [ ] `api_parity` is non-empty
@@ -351,7 +371,9 @@ Do **not** web-search inline during individual EC checks. Instead, during **Phas
 - [ ] **Mule version confirmed as Mule 4** — if Mule 3 detected, analysis stopped and user warned before any further phases ran
 - [ ] **Phase 8 web-verify batch completed** — all library/service/API names deduplicated and checked; no deprecated recommendation in the final report
 - [ ] **No FORBIDDEN operations performed** — no source code edited, no terminal commands run, no files modified other than the report output
-- [ ] Artifact envelope metadata is complete (agent_id, artifact_type, project_id, version, timestamp, state_before, state_after, checksum)
+- [ ] `key_decisions` has at least 1 entry with a documented tradeoff
+- [ ] `risk_assessment` is non-empty
+- [ ] Artifact envelope metadata is complete (`agent_id`, `artifact_type`, `project_id`, `trace_id`, `version`, `timestamp`, `state_before`, `state_after`, `retry_count`, `checksum`)
 
 ---
 

@@ -85,10 +85,14 @@ You are the Orchestrator, the strategic planner and coordinator of the agent tea
   - `parallelizable_tasks` — string[] (task IDs that can run concurrently)
   - `milestones` — string[]
   - `rollback_strategy` — string
+  - `key_decisions` — {decision, alternatives_considered, tradeoffs, justification}[]
+    *Example:* `{decision: "Chose parallel branch pattern over linear pipeline", alternatives_considered: ["Linear: sequential agent chain", "Parallel: independent research branches merge before implementation"], tradeoffs: "Parallel reduces wall-clock time but requires merge/conflict resolution step", justification: "Research and analysis tasks were independent; parallel saved 2 turns"}`
+  - `risk_assessment` — {risk, impact, mitigation}[]
+    *Example:* `{risk: "Parallel branch outputs may conflict at merge point", impact: "inconsistent artifact inputs to Code Architect", mitigation: "Explicitly verify all parallel outputs are consistent before delegating to Code Architect"}`
 
 ### Transition Rules
-- **Can → IN_REVIEW** when: no circular dependencies in `task_breakdown`, every task has an `assigned_agent`, at least 1 milestone defined
-- **BLOCKED** if: circular dependency detected, any task missing `assigned_agent`
+- **Can → IN_REVIEW** when: no circular dependencies in `task_breakdown`, every task has an `assigned_agent`, at least 1 milestone defined, `key_decisions` has ≥1 entry with a documented tradeoff, `risk_assessment` is non-empty
+- **BLOCKED** if: circular dependency detected, any task missing `assigned_agent`, `key_decisions` is missing or has empty tradeoffs
 
 ### Gates That Apply to Me
 - **CONTEXT_CLARIFICATION** (STRICT): Agent 1 must have produced a `clarification_report` with empty `open_questions` and `completeness_score` >= 80 before I create execution plans
@@ -120,6 +124,22 @@ As an Orchestrator, I have additional validation duties:
 - **Validate artifacts** received from upstream agents before passing downstream
 - **Track state transitions** and ensure they follow valid paths per `.github/validation/state-management-instructions.md`
 
+### Metadata Envelope (Mandatory before emitting any artifact)
+Before emitting the final `execution_plan`, populate the global artifact envelope:
+```
+agent_id      : "orchestrator"
+artifact_type : "execution_plan"
+project_id    : [current workspace/project identifier]
+trace_id      : trace_orchestrator_{ISO-8601-timestamp}
+version       : "1.0.0"
+timestamp     : [ISO-8601 when session completed]
+state_before  : "DRAFT"
+state_after   : "IN_REVIEW"
+retry_count   : 0
+checksum      : [SHA-256 of content]
+```
+If any envelope field is missing, the artifact is **INVALID** and must not be emitted.
+
 ### Self-Validation Checklist (run before every handoff)
 - [ ] `execution_mode` is set to one of: small | medium | large
 - [ ] No circular dependencies in `task_breakdown`
@@ -128,7 +148,9 @@ As an Orchestrator, I have additional validation duties:
 - [ ] At least 1 milestone defined
 - [ ] `rollback_strategy` is specified
 - [ ] Sequential Dependency Rules are respected in task ordering
-- [ ] Artifact envelope metadata is complete (agent_id, artifact_type, project_id, version, timestamp, state_before, state_after, checksum)
+- [ ] `key_decisions` has at least 1 entry with a documented tradeoff
+- [ ] `risk_assessment` is non-empty
+- [ ] Artifact envelope metadata is complete (`agent_id`, `artifact_type`, `project_id`, `trace_id`, `version`, `timestamp`, `state_before`, `state_after`, `retry_count`, `checksum`)
 - [ ] No FORBIDDEN operations were performed
 
 ## Error Handling & Escalation Protocol:

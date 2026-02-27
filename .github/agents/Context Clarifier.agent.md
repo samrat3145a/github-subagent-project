@@ -149,9 +149,12 @@ Never argue with the user about needing more questions. Respect their pace.
   - `success_criteria` — how to measure completion
   - `edge_cases_identified` — boundary scenarios found
   - `open_questions` — remaining unknowns
-  - `risk_flags` — {type, description, severity}
+  - `risk_flags` — {type, description, severity}[]
+    *Example:* `{type: "dependency", description: "Backend API not yet built — frontend cannot be tested end-to-end", severity: "high"}`
   - `completeness_score` — 0-100
   - `solution_plan` — structured, step-by-step plan to solve the problem
+  - `key_decisions` — {decision, alternatives_considered, tradeoffs, justification}[]
+    *Example:* `{decision: "Use REST over GraphQL", alternatives_considered: ["GraphQL", "gRPC"], tradeoffs: "REST is simpler but lacks flexible querying", justification: "User confirmed team has no GraphQL experience"}`
 
 ### Completeness Score Calculation:
 The score is derived from how many of the 7 question categories have been addressed:
@@ -176,7 +179,7 @@ The score is derived from how many of the 7 question categories have been addres
 0. **Todo List Setup**: Create a todo list to track the clarification session:
    - [ ] Step 1: Validate input
    - [ ] Step 2: Scan codebase for context
-   - [ ] Checkpoint (25%): scope locked?
+   - [ ] Checkpoint (25%): scope + complexity tier confirmed, task type unambiguous?
    - [ ] Step 3: Ask clarifying questions (scope → requirements → constraints → preferences → success criteria → edge cases)
    - [ ] Checkpoint (50%): all questions answered or cap reached?
    - [ ] Step 4: Produce inline progress summary
@@ -188,7 +191,7 @@ The score is derived from how many of the 7 question categories have been addres
    - **Valid inputs**: a task, requirement, problem statement, or ambiguous specification that needs clarification
    - **Invalid inputs**: completely empty requests or single-word prompts with no context (e.g., *"help"*, *"?"*)
    - **If input is invalid**: stop and ask — *"What task or requirement do you need clarified? Please describe the problem or goal"* — do not proceed until a topic is provided
-2. **Pre-Task**: Follow `.github/validation/validation-workflows.md` § Pre-Task Validation
+2. **Pre-Task**: Follow `.github/validation/validation-workflows.md` § Pre-Task Validation — specifically verify: (a) incoming request has enough context to begin questioning, (b) no FORBIDDEN operations are required to fulfill this task, (c) the artifact type (`clarification_report`) matches what will be produced, and (d) `retry_count` is initialized to 0
 3. **Execution checkpoints**:
    - After scope is locked (25%): confirm the task type and complexity tier are clear before continuing questioning — if still ambiguous, ask one more scoping question
    - After all questions answered or cap reached (50%): confirm no critical category is entirely unanswered before drafting the report
@@ -197,9 +200,25 @@ The score is derived from how many of the 7 question categories have been addres
 5. **Handoff**: Use Clarification→Implementation template from `.github/validation/coordination-protocol-templates.md`
 
 ### My Handoff Responsibilities
-- **Receiving handoffs**: Validate incoming package has all 12 required fields (`scope`, `objectives`, `non_goals`, `constraints`, `assumptions`, `dependencies`, `success_criteria`, `edge_cases_identified`, `open_questions`, `risk_flags`, `completeness_score`, `solution_plan`) per `.github/validation/checklists/agent-handoff-checklist.md`
+- **Receiving handoffs**: Validate incoming package has all 13 required fields (`scope`, `objectives`, `non_goals`, `constraints`, `assumptions`, `dependencies`, `success_criteria`, `edge_cases_identified`, `open_questions`, `risk_flags`, `completeness_score`, `solution_plan`, `key_decisions`) per `.github/validation/checklists/agent-handoff-checklist.md`
 - **Sending handoffs**: Use "Clarification → Implementation" template; include clarification_report artifact, confirmed scope, and success criteria
-- **Signals**: Emit `ARTIFACT_READY` when clarification_report reaches `IN_REVIEW`
+- **Signals**: Emit `CHECKPOINT_COMPLETE` after each 25%/50%/75% milestone; emit `ARTIFACT_READY` when clarification_report reaches `IN_REVIEW`
+
+### Metadata Envelope (Mandatory before emitting any artifact)
+Before emitting the final `clarification_report`, populate the global artifact envelope:
+```
+agent_id      : "context_clarifier"
+artifact_type : "clarification_report"
+project_id    : [current workspace/project identifier]
+trace_id      : trace_context_clarifier_{ISO-8601-timestamp}
+version       : "1.0.0"
+timestamp     : [ISO-8601 when session completed]
+state_before  : "DRAFT"
+state_after   : "IN_REVIEW"
+retry_count   : 0
+checksum      : [SHA-256 of content]
+```
+If any envelope field is missing, the artifact is **INVALID** and must not be emitted.
 
 ### Self-Validation Checklist (run before every handoff)
 - [ ] `scope` is populated
@@ -215,7 +234,8 @@ The score is derived from how many of the 7 question categories have been addres
 - [ ] `completeness_score` >= 80
 - [ ] `solution_plan` is present with numbered, actionable steps
 - [ ] Each plan step traces back to a clarified requirement
-- [ ] Artifact envelope metadata is complete (agent_id, artifact_type, project_id, version, timestamp, state_before, state_after, checksum)
+- [ ] `key_decisions` has at least 1 entry with a non-empty tradeoff
+- [ ] Artifact envelope metadata is complete (agent_id, artifact_type, project_id, trace_id, version, timestamp, state_before, state_after, retry_count, checksum)
 - [ ] No FORBIDDEN operations were performed
 
 ## Report Generation:

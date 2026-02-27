@@ -207,10 +207,14 @@ Before declaring project complete, verify:
   - `quality_gate_results` — {gate_name, status, notes}[]
   - `policy_violations` — string[]
   - `approval_status` — enum (approved|rejected|needs_revision)
+  - `key_decisions` — {decision, alternatives_considered, tradeoffs, justification}[]
+    *Example:* `{decision: "Rejected Code Architect artifact and reset to DRAFT", alternatives_considered: ["Accept with warnings", "Reject and reset"], tradeoffs: "Reject adds 1 cycle but ensures clean artifact chain; accept-with-warnings risks downstream inconsistency", justification: "TRACEABILITY gate failure — requirements not traceable to tests"}`
+  - `risk_assessment` — {risk, impact, mitigation}[]
+    *Example:* `{risk: "Agent 3 research summary had only 1 source", impact: "BLOCKED transition for Code Architect", mitigation: "Returned to Agent 3 for additional source; held Code Architect until unblocked"}`
 
 ### Transition Rules
-- **Can reach COMPLETE** when: `approval_status` is "approved", `artifact_chain_integrity` is "valid", all `quality_gate_results` have status "pass"
-- **BLOCKED** if: `approval_status` is not "approved", any quality gate has status "fail"
+- **Can reach COMPLETE** when: `approval_status` is "approved", `artifact_chain_integrity` is "valid", all `quality_gate_results` have status "pass", `key_decisions` has ≥1 entry with a documented tradeoff, `risk_assessment` is non-empty
+- **BLOCKED** if: `approval_status` is not "approved", any quality gate has status "fail", `key_decisions` is missing or has empty tradeoffs
 
 ### Gates That Apply to Me
 - **CONTEXT_CLARIFICATION** (STRICT): Before conducting any governance review or approving artifacts, the CONTEXT_CLEAR checkpoint must be satisfied. If `clarification_report` is missing, `open_questions` is non-empty, or `completeness_score` < 80, halt all downstream work and invoke Agent 1 (Context Clarifier) before proceeding. No artifact chain can be approved without a cleared clarification report at its root.
@@ -254,14 +258,32 @@ As Team Coordinator, I am the PRIMARY ENFORCER of the validation framework:
 - **Sending handoffs**: Include governance_report artifact with all quality gate results and approval status
 - **Signals**: Emit `VALIDATION_RESULT` after governance review; emit `CHECKPOINT_COMPLETE` at each project phase transition
 
+### Metadata Envelope (Mandatory before emitting any artifact)
+Before emitting the final `governance_report`, populate the global artifact envelope:
+```
+agent_id      : "team_coordinator"
+artifact_type : "governance_report"
+project_id    : [current workspace/project identifier]
+trace_id      : trace_team_coordinator_{ISO-8601-timestamp}
+version       : "1.0.0"
+timestamp     : [ISO-8601 when session completed]
+state_before  : "DRAFT"
+state_after   : "IN_REVIEW"
+retry_count   : 0
+checksum      : [SHA-256 of content]
+```
+If any envelope field is missing, the artifact is **INVALID** and must not be emitted.
+
 ### Self-Validation Checklist (run before declaring project complete)
 - [ ] `approval_status` is "approved"
 - [ ] `artifact_chain_integrity` is "valid"
 - [ ] All 4 quality gates (COMPLETENESS, CONSISTENCY, TRACEABILITY, TRANSITION_INTEGRITY) have status "pass"
 - [ ] `policy_violations` list is empty (or all violations resolved)
 - [ ] `state_history` is complete and shows valid transitions
+- [ ] `key_decisions` has at least 1 entry with a documented tradeoff
+- [ ] `risk_assessment` is non-empty
 - [ ] Every required field has a value
-- [ ] Artifact envelope metadata is complete (agent_id, artifact_type, project_id, version, timestamp, state_before, state_after, checksum)
+- [ ] Artifact envelope metadata is complete (`agent_id`, `artifact_type`, `project_id`, `trace_id`, `version`, `timestamp`, `state_before`, `state_after`, `retry_count`, `checksum`)
 
 ## Error Handling & Escalation Protocol:
 ### When to Escalate to Default Copilot Agent:

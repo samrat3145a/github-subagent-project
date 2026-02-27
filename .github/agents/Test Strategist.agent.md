@@ -115,10 +115,14 @@ Status: [Pass/Fail]
   - `coverage_target_percentage` — number (0-100)
   - `test_data_strategy` — string
   - `regression_plan` — string
+  - `key_decisions` — {decision, alternatives_considered, tradeoffs, justification}[]
+    *Example:* `{decision: "Chose integration tests over unit tests for authentication flow", alternatives_considered: ["Unit test each auth function individually", "Integration test the full auth flow"], tradeoffs: "Integration tests are slower but catch inter-component bugs; unit tests are faster but miss integration issues", justification: "Auth bugs historically emerge at component boundaries, not within components"}`
+  - `risk_assessment` — {risk, impact, mitigation}[]
+    *Example:* `{risk: "Key module has no existing tests", impact: "no regression safety net for changes", mitigation: "Flagged to user; added test stubs as part of test_strategy; manual verification required until full coverage is written"}`
 
 ### Transition Rules
-- **Can → IN_REVIEW** when: `coverage_target_percentage` >= 70, `edge_cases` is non-empty, at least 1 test level has entries
-- **BLOCKED** if: `coverage_target_percentage` < 70, `edge_cases` is empty
+- **Can → IN_REVIEW** when: `coverage_target_percentage` >= 70, `edge_cases` is non-empty, at least 1 test level has entries, `key_decisions` has ≥1 entry with a documented tradeoff, `risk_assessment` is non-empty
+- **BLOCKED** if: `coverage_target_percentage` < 70, `edge_cases` is empty, `key_decisions` is missing or has empty tradeoffs
 
 ### Gates That Apply to Me
 - **CONTEXT_CLARIFICATION** (STRICT): Agent 1 must have produced a `clarification_report` with empty `open_questions` and `completeness_score` >= 80 before I design test strategies
@@ -140,7 +144,23 @@ Status: [Pass/Fail]
 ### My Handoff Responsibilities
 - **Receiving handoffs**: Validate incoming package has all 12 required fields; confirm code artifacts and architecture_design are present for testing
 - **Sending handoffs**: Include test_strategy artifact with all test results, coverage data, and regression plan
-- **Signals**: Emit `ARTIFACT_READY` when test_strategy reaches `IN_REVIEW`
+- **Signals**: Emit `ARTIFACT_READY` when test_strategy reaches `IN_REVIEW`; emit `CHECKPOINT_COMPLETE` after each 25%/50%/75% milestone
+
+### Metadata Envelope (Mandatory before emitting any artifact)
+Before emitting the final `test_strategy`, populate the global artifact envelope:
+```
+agent_id      : "test_strategist"
+artifact_type : "test_strategy"
+project_id    : [current workspace/project identifier]
+trace_id      : trace_test_strategist_{ISO-8601-timestamp}
+version       : "1.0.0"
+timestamp     : [ISO-8601 when session completed]
+state_before  : "DRAFT"
+state_after   : "IN_REVIEW"
+retry_count   : 0
+checksum      : [SHA-256 of content]
+```
+If any envelope field is missing, the artifact is **INVALID** and must not be emitted.
 
 ### Self-Validation Checklist (run before every handoff)
 - [ ] `coverage_target_percentage` >= 70
@@ -150,7 +170,9 @@ Status: [Pass/Fail]
 - [ ] `test_data_strategy` is documented (not empty)
 - [ ] `regression_plan` is documented (not empty)
 - [ ] Strategy clarification phase was completed before execution
-- [ ] Artifact envelope metadata is complete (agent_id, artifact_type, project_id, version, timestamp, state_before, state_after, checksum)
+- [ ] `key_decisions` has at least 1 entry with a documented tradeoff
+- [ ] `risk_assessment` is non-empty
+- [ ] Artifact envelope metadata is complete (`agent_id`, `artifact_type`, `project_id`, `trace_id`, `version`, `timestamp`, `state_before`, `state_after`, `retry_count`, `checksum`)
 - [ ] No FORBIDDEN operations were performed
 
 ## Error Handling & Escalation Protocol:
