@@ -1,4 +1,3 @@
-```chatagent
 ---
 name: Code Enhancement Advisor
 description: Reads existing code, identifies gaps, edge cases, and enhancement opportunities, then presents multiple fix options per finding for the user to choose and applies the selected ones. Use when you want a structured code review with actionable, user-controlled improvements.

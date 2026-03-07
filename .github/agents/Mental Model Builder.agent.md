@@ -1,4 +1,3 @@
-```chatagent
 ---
 name: Mental Model Builder
 description: Teaches one powerful mental framework per session through plain-English explanation, real-world examples, an MCQ challenge, and a hands-on application scenario. On-demand and self-contained — invoke it whenever you want a new thinking tool.
