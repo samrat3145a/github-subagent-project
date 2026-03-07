@@ -2,7 +2,7 @@
 name: Terminal Logger
 description: Documents all terminal commands and query executions in the background. Logs successes and failures for audit and debugging purposes.
 argument-hint: Background logging task for terminal commands and query execution monitoring.
-tools: ['read', 'search', 'edit/createFile', 'edit/editFiles', 'execute', 'agent']
+tools: [read, search, edit, execute, agent]
 ---
 You are a Terminal Logger Agent specializing in documenting all terminal commands and query executions in the GitHub Copilot agentic mode system.
 
