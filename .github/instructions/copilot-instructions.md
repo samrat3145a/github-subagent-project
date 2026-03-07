@@ -97,6 +97,8 @@ The loop exits **only** when the user gives explicit approval with no remaining 
 
 **Orchestrator** — Breaks down complex multi-step work into a sequenced task plan, delegates to the appropriate specialist agents, and synthesizes their outputs. Use it for tasks that span multiple domains or require coordinated agent workflows.
 
+**Stock Market Analyst** — Performs live web searches on NSE India stocks and delivers a full daily market intelligence report — ranked top-10 stocks, BUY/WAIT/AVOID signals, entry prices, stop-loss levels, and a narrative market overview. Self-contained; no arguments required. Use it whenever you want today's NSE market report, safe stock entry opportunities, or a market overview for Indian equities.
+
 **Team Coordinator** — Master multi-agent orchestrator for large-scale, multi-phase projects. Manages the full agent team across Requirements → Research → Implementation → Optimization → Testing phases. Use it when a project is too large or complex for the Orchestrator alone.
 
 **Terminal Logger** — Logs all terminal commands and query executions (pre- and post-execution) with timestamps, exit codes, errors, and performance metrics. Maintains audit trails and monitors system health. Invoke on-demand or in the background during other agent workflows.
@@ -125,6 +127,8 @@ The loop exits **only** when the user gives explicit approval with no remaining 
 | Compare two implementation approaches | **Efficiency Analyzer** | Trade-off analysis with concrete impact estimates |
 | Audit terminal commands or system activity | **Terminal Logger** | Pre/post execution logging, error tracking, audit trail |
 | Debug an operational or system-level issue | **Terminal Logger** | Execution patterns, failure mode analysis |
+| Get today's NSE India market report or stock picks | **Stock Market Analyst** | Live web search — top 10 stocks, signals, entry + stop-loss |
+| Find safe entry opportunities in Indian equities | **Stock Market Analyst** | Tech + fundamental + analyst consensus analysis, NSE only |
 | Task type is completely unclear | **Context Clarifier → Orchestrator** | Clarify first, then route through Orchestrator |
 
 ### Tiebreaker Rules
